@@ -1,0 +1,33 @@
+services:   
+    payment-redis:
+        container_name: payment-redis
+        image: redis:7-alpine
+        restart: unless-stopped
+        ports:
+            - "6377:6379"
+        volumes:
+            - redis_data:/data
+            - ./redis.conf:/usr/local/etc/redis/redis.conf
+        command: redis-server /usr/local/etc/redis/redis.conf
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+        networks:
+            - payment_network
+        environment:
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 3s
+            retries: 3
+
+volumes:
+    redis_data:
+        name: 'redis_data'
+
+networks:
+    payment_network:
+        external: true
