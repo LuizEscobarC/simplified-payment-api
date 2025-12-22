@@ -1,0 +1,96 @@
+services:
+    payment-nginx:
+        container_name: payment-nginx
+        image: nginx:alpine
+        restart: unless-stopped
+        ports:
+            - "80:80"
+            - "443:443"
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+        volumes:
+            - ../../api:/var/www/html
+            - ./nginx/${NGINX_CONF_FILE:-local.conf}:/etc/nginx/conf.d/default.conf
+        command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+        networks:
+            - payment-api-main
+
+    app:
+        container_name: payment-api
+        build:
+            context: ../..
+            dockerfile: infra/docker/php/Dockerfile.local
+        restart: unless-stopped
+        env_file:
+            - .env
+        environment:
+            DB_CONNECTION: ${DB_CONNECTION}
+            DB_HOST: ${DB_HOST}
+            DB_DATABASE: ${DB_DATABASE}
+            DB_USERNAME: ${DB_USERNAME}
+            DB_PASSWORD: ${DB_PASSWORD}
+            DB_DADOS_CONNECTION: ${DB_DADOS_CONNECTION}
+            DB_DADOS_HOST: ${DB_DADOS_HOST}
+            DB_DADOS_DATABASE: ${DB_DADOS_DATABASE}
+            DB_DADOS_USERNAME: ${DB_DADOS_USERNAME}
+            DB_DADOS_PASSWORD: ${DB_DADOS_PASSWORD}
+            REDIS_HOST: ${REDIS_HOST}
+            REDIS_PORT: ${REDIS_PORT}
+        working_dir: /var/www/html
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+        volumes:
+            - ../../api/:/var/www/html
+            - ./php/${INI_FILE:-local.ini}:/usr/local/etc/php/conf.d/local.ini
+            - ./php/www.conf:/usr/local/etc/php-fpm.d/www.conf
+        networks:
+            - payment-api-main
+            - payment-api-cache
+
+    supervisor:
+        image: neobackend-supervisor:latest
+        profiles:
+            - production
+        container_name: et-supervisor
+        restart: unless-stopped
+        command: ["/usr/bin/supervisord", "-n", "-c",  "/etc/supervisor/supervisord.conf"]
+        environment:
+            APP_ROOT: ${APP_ROOT}
+            QUEUE_DRIVER: ${QUEUE_CONNECTION}
+            OPTIONS: ${QUEUE_OPTIONS}
+            DB_CONNECTION: ${DB_CONNECTION}
+            DB_HOST: ${DB_HOST}
+            DB_DATABASE: ${DB_DATABASE}
+            DB_USERNAME: ${DB_USERNAME}
+            DB_PASSWORD: ${DB_PASSWORD}
+            DB_DADOS_CONNECTION: ${DB_DADOS_CONNECTION}
+            DB_DADOS_HOST: ${DB_DADOS_HOST}
+            DB_DADOS_DATABASE: ${DB_DADOS_DATABASE}
+            DB_DADOS_USERNAME: ${DB_DADOS_USERNAME}
+            DB_DADOS_PASSWORD: ${DB_DADOS_PASSWORD}
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+        volumes:
+            - ../../api/:/var/www/html
+            - ./supervisor/supervisor.conf:/etc/supervisor/supervisord.conf
+            - ./php/${INI_FILE}:/usr/local/etc/php/conf.d/local.ini
+            - ./php/www.conf:/usr/local/etc/php-fpm.d/www.conf
+        networks:
+            - payment-api-main
+
+networks:
+    payment-api-main:
+        external: true
+    payment-api-cache:
+        external: true
+    payment-api-monitoring:
+        external: true
