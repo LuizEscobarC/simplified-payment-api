@@ -1,319 +1,323 @@
-# scripts/services/base_service.py
+# infra/docker/services/base_service.py
 """
-Classe base para serviços do sistema.
+Classe base simplificada para serviços Docker.
 
-Define a interface comum para todos os serviços do sistema,
-incluindo inicialização, validação e execução.
+Fornece funcionalidades comuns para gerenciar containers Docker Compose.
 """
 
+import subprocess
+import time
+import requests
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-import docker
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from typing import Optional, List, Dict, Any
 
-from ..env_manager import EnvManager
-from ..docker_service import DockerService
-from ..logger_setup import get_logger
+from rich.console import Console
 
 console = Console()
-logger = get_logger(__name__)
 
 
-class BaseService(ABC):
+class BaseDockerService(ABC):
     """
-    Classe base abstrata para todos os serviços.
+    Classe base para serviços Docker Compose.
 
-    Define a interface comum e funcionalidades compartilhadas
-    entre todos os serviços do sistema.
+    Fornece métodos comuns para start, stop, verify, logs e cleanup.
     """
 
     def __init__(
         self,
         name: str,
-        env_file: str = ".env",
-        base_path: Optional[Path] = None
+        container_name: str = "",
+        image: str = "",
+        ports: Optional[List[str]] = None,
+        environment: Optional[List[str]] = None,
+        volumes: Optional[List[str]] = None,
+        networks: Optional[List[str]] = None,
+        depends_on: Optional[List[str]] = None,
+        healthcheck: Optional[Dict[str, Any]] = None,
+        command: Optional[List[str]] = None,
+        compose_file: Optional[Path] = None
     ):
         """
-        Inicializa serviço base.
+        Inicializa serviço Docker.
 
         Args:
             name: Nome do serviço
-            env_file: Arquivo .env a usar
-            base_path: Diretório base do serviço
+            container_name: Nome do container
+            image: Imagem Docker
+            ports: Lista de mapeamentos de porta
+            environment: Variáveis de ambiente
+            volumes: Volumes
+            networks: Redes
+            depends_on: Dependências
+            healthcheck: Configuração de healthcheck
+            command: Comando customizado
+            compose_file: Caminho para docker-compose.yml
         """
         self.name = name
-        self.base_path = base_path or Path.cwd()
-        self.env_file = self.base_path / env_file
+        self.container_name = container_name or name.lower()
+        self.image = image
+        self.ports = ports or []
+        self.environment = environment or []
+        self.volumes = volumes or []
+        self.networks = networks or []
+        self.depends_on = depends_on or []
+        self.healthcheck = healthcheck
+        self.command = command or []
 
-        # Componentes compartilhados
-        self.env_manager = EnvManager(env_file)
-        self.docker_client = docker.from_env()
+        # Define caminho do compose file
+        if compose_file is None:
+            self.compose_file = Path(__file__).parent.parent / "docker-compose.local.yml"
+        else:
+            self.compose_file = compose_file
 
-        # Estado do serviço
-        self._initialized = False
-        self._validated = False
-
-        logger.debug(f"Serviço {name} inicializado")
-
-    @property
-    def is_initialized(self) -> bool:
-        """Retorna se o serviço foi inicializado."""
-        return self._initialized
-
-    @property
-    def is_validated(self) -> bool:
-        """Retorna se o serviço foi validado."""
-        return self._validated
-
-    @abstractmethod
-    def get_required_vars(self) -> List[str]:
+    def _verify_http_endpoint(self, url: str, expected_status: int = 200, max_attempts: int = 10, accept_statuses: Optional[List[int]] = None) -> bool:
         """
-        Retorna lista de variáveis de ambiente obrigatórias.
+        Verifica endpoint HTTP.
+
+        Args:
+            url: URL para verificar
+            expected_status: Status esperado (padrão)
+            max_attempts: Máximo de tentativas
+            accept_statuses: Lista de status aceitáveis
 
         Returns:
-            Lista de nomes de variáveis obrigatórias
+            True se endpoint responde corretamente
         """
-        pass
+        if accept_statuses is None:
+            accept_statuses = [expected_status]
 
-    @abstractmethod
-    def get_service_config(self) -> Dict[str, Any]:
-        """
-        Retorna configuração específica do serviço.
+        for attempt in range(max_attempts):
+            try:
+                response = requests.get(url, timeout=5)
+                if response.status_code in accept_statuses:
+                    return True
+            except Exception:
+                pass
+            time.sleep(2)
+        return False
 
-        Returns:
-            Dicionário com configuração do serviço
-        """
-        pass
-
-    def initialize(self) -> bool:
-        """
-        Inicializa o serviço.
-
-        Returns:
-            True se inicializou com sucesso
-        """
+    def cleanup_existing(self) -> None:
+        """Remove container existente se houver conflito."""
         try:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn(f"[cyan]Inicializando {self.name}..."),
-                console=console
-            ) as progress:
-                task = progress.add_task("", total=3)
-
-                # 1. Configurar ambiente
-                progress.update(task, advance=1, description=f"[cyan]Configurando ambiente para {self.name}...")
-                if not self._setup_environment():
-                    return False
-
-                # 2. Carregar variáveis
-                progress.update(task, advance=1, description=f"[cyan]Carregando variáveis para {self.name}...")
-                if not self._load_environment():
-                    return False
-
-                # 3. Validar pré-requisitos
-                progress.update(task, advance=1, description=f"[cyan]Validando pré-requisitos para {self.name}...")
-                if not self._validate_prerequisites():
-                    return False
-
-            self._initialized = True
-            console.print(f"✅ {self.name} inicializado com sucesso", style="green")
-            logger.info(f"Serviço {self.name} inicializado com sucesso")
-            return True
-
+            # Forçar remoção do container
+            result = self.run_docker_command(["rm", "-f", self.container_name])
+            if result.returncode == 0:
+                console.print(f"✓ Cleanup executado para {self.container_name}", style="yellow")
         except Exception as e:
-            console.print(f"❌ Erro ao inicializar {self.name}: {e}", style="red")
-            logger.error(f"Erro ao inicializar {self.name}: {e}")
-            return False
+            console.print(f"⚠️  Erro no cleanup: {e}", style="yellow")
 
-    def validate(self) -> bool:
+    def run_compose_command(self, command: list, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
         """
-        Valida configuração e estado do serviço.
+        Executa comando docker-compose.
+
+        Args:
+            command: Lista com comando docker-compose
+            cwd: Diretório de trabalho
 
         Returns:
-            True se válido
+            Resultado do subprocess
         """
+        full_command = ["docker", "compose", "-f", str(self.compose_file)] + command
+        return subprocess.run(
+            full_command,
+            capture_output=True,
+            text=True,
+            cwd=cwd or self.compose_file.parent
+        )
+
+    def run_docker_command(self, command: list) -> subprocess.CompletedProcess:
+        """
+        Executa comando docker.
+
+        Args:
+            command: Lista com comando docker
+
+        Returns:
+            Resultado do subprocess
+        """
+        full_command = ["docker"] + command
+        return subprocess.run(
+            full_command,
+            capture_output=True,
+            text=True
+        )
+
+    def is_container_running(self) -> bool:
+        """
+        Verifica se container está rodando.
+
+        Returns:
+            True se container está up
+        """
+        result = self.run_docker_command([
+            "inspect", "-f", "{{.State.Running}}", self.container_name
+        ])
+
+        return result.returncode == 0 and result.stdout.strip() == "true"
+
+    def start(self, wait: bool = True) -> bool:
+        """
+        Inicia serviço via Docker.
+
+        Args:
+            wait: Aguardar serviço ficar pronto
+
+        Returns:
+            True se iniciou com sucesso
+        """
+        console.print(f"🚀 Iniciando {self.name}...", style="blue")
+
+        self.cleanup_existing()
+
+        # Criar networks se necessário
+        for network in self.networks:
+            self._ensure_network_exists(network)
+
         try:
-            if not self.is_initialized:
-                console.print(f"⚠️  {self.name} não foi inicializado", style="yellow")
+            # Construir comando docker run
+            cmd = ["run", "-d", "--name", self.container_name]
+
+            # Adicionar portas
+            for port in self.ports:
+                cmd.extend(["-p", port])
+
+            # Adicionar environment
+            for env in self.environment:
+                cmd.extend(["-e", env])
+
+            # Adicionar volumes
+            for volume in self.volumes:
+                cmd.extend(["-v", volume])
+
+            # Adicionar networks
+            for network in self.networks:
+                cmd.extend(["--network", network])
+
+            # Adicionar healthcheck se existir
+            if self.healthcheck:
+                health_cmd = self.healthcheck.get("test", [])
+                if health_cmd:
+                    cmd.extend(["--health-cmd", " ".join(health_cmd[1:])])  # Remove CMD-SHELL
+                    cmd.extend(["--health-interval", self.healthcheck.get("interval", "30s")])
+                    cmd.extend(["--health-timeout", self.healthcheck.get("timeout", "10s")])
+                    cmd.extend(["--health-retries", str(self.healthcheck.get("retries", 3))])
+
+            # Adicionar imagem
+            cmd.append(self.image)
+
+            # Adicionar comando customizado
+            if self.command:
+                cmd.extend(self.command)
+
+            result = self.run_docker_command(cmd)
+
+            if result.returncode != 0:
+                console.print(f"❌ Erro ao iniciar {self.name}: {result.stderr}", style="red")
                 return False
 
-            with Progress(
-                SpinnerColumn(),
-                TextColumn(f"[cyan]Validando {self.name}..."),
-                console=console
-            ) as progress:
-                task = progress.add_task("", total=2)
+            console.print(f"✅ {self.name} iniciado", style="green")
 
-                # 1. Validar variáveis obrigatórias
-                progress.update(task, advance=1, description=f"[cyan]Validando variáveis para {self.name}...")
-                if not self._validate_required_vars():
-                    return False
+            if wait:
+                return self.verify()
 
-                # 2. Validar configuração específica
-                progress.update(task, advance=1, description=f"[cyan]Validando configuração para {self.name}...")
-                if not self._validate_service_config():
-                    return False
-
-            self._validated = True
-            console.print(f"✅ {self.name} validado com sucesso", style="green")
-            logger.info(f"Serviço {self.name} validado com sucesso")
             return True
 
         except Exception as e:
-            console.print(f"❌ Erro ao validar {self.name}: {e}", style="red")
-            logger.error(f"Erro ao validar {self.name}: {e}")
+            console.print(f"❌ Erro ao iniciar {self.name}: {e}", style="red")
+            return False
+
+    def _ensure_network_exists(self, network_name: str) -> None:
+        """
+        Garante que a rede Docker existe.
+
+        Args:
+            network_name: Nome da rede
+        """
+        try:
+            result = self.run_docker_command(["network", "ls", "--format", "{{.Name}}"])
+            if network_name not in result.stdout.split():
+                self.run_docker_command(["network", "create", network_name])
+                console.print(f"✓ Rede {network_name} criada", style="green")
+        except Exception as e:
+            console.print(f"⚠️  Erro ao verificar/criar rede {network_name}: {e}", style="yellow")
+
+    def stop(self) -> bool:
+        """
+        Para serviço.
+
+        Returns:
+            True se parou com sucesso
+        """
+        console.print(f"🛑 Parando {self.name}...", style="yellow")
+
+        try:
+            # Parar container
+            result = self.run_docker_command(["stop", self.container_name])
+
+            if result.returncode != 0:
+                console.print(f"❌ Erro ao parar {self.name}: {result.stderr}", style="red")
+                return False
+
+            # Remover container
+            self.run_docker_command(["rm", self.container_name])
+
+            console.print(f"✅ {self.name} parado", style="green")
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao parar {self.name}: {e}", style="red")
+            return False
+
+        except Exception as e:
+            console.print(f"❌ Erro ao parar {self.name}: {e}", style="red")
             return False
 
     @abstractmethod
-    def execute(self) -> bool:
+    def verify(self, max_attempts: int = 30) -> bool:
         """
-        Executa a lógica principal do serviço.
+        Verifica se serviço está pronto.
+
+        Args:
+            max_attempts: Número máximo de tentativas
 
         Returns:
-            True se executou com sucesso
+            True se serviço está pronto
         """
         pass
 
-    def cleanup(self) -> bool:
+    def logs(self, follow: bool = False, tail: int = 100) -> None:
         """
-        Limpa recursos do serviço.
+        Exibe logs do serviço.
 
-        Returns:
-            True se limpou com sucesso
+        Args:
+            follow: Seguir logs em tempo real
+            tail: Número de linhas a exibir
         """
+        cmd = ["logs", self.get_service_name()]
+
+        if follow:
+            cmd.append("-f")
+
+        cmd.extend(["--tail", str(tail)])
+
         try:
-            console.print(f"🧹 Limpando {self.name}...", style="cyan")
-            # Implementação padrão - pode ser sobrescrita
-            logger.info(f"Serviço {self.name} limpo")
-            return True
+            result = self.run_compose_command(cmd)
+            if result.returncode == 0:
+                print(result.stdout)
+            else:
+                console.print(f"❌ Erro ao exibir logs: {result.stderr}", style="red")
         except Exception as e:
-            console.print(f"❌ Erro ao limpar {self.name}: {e}", style="red")
-            logger.error(f"Erro ao limpar {self.name}: {e}")
-            return False
+            console.print(f"❌ Erro ao exibir logs: {e}", style="red")
 
-    def get_status(self) -> Dict[str, Any]:
+    def restart(self) -> bool:
         """
-        Retorna status atual do serviço.
+        Reinicia serviço.
 
         Returns:
-            Dicionário com informações de status
+            True se reiniciou com sucesso
         """
-        return {
-            "name": self.name,
-            "initialized": self._initialized,
-            "validated": self._validated,
-            "base_path": str(self.base_path),
-            "env_file": str(self.env_file),
-            "env_file_exists": self.env_file.exists(),
-            "config": self.get_service_config()
-        }
-
-    def display_status(self):
-        """Exibe status do serviço formatado."""
-        from rich.panel import Panel
-        from rich.table import Table
-
-        status = self.get_status()
-
-        # Tabela principal
-        table = Table(title=f"Status do Serviço: {self.name}")
-        table.add_column("Propriedade", style="cyan")
-        table.add_column("Valor", style="yellow")
-
-        table.add_row("Inicializado", "✅" if status["initialized"] else "❌")
-        table.add_row("Validado", "✅" if status["validated"] else "❌")
-        table.add_row("Diretório Base", str(status["base_path"]))
-        table.add_row("Arquivo .env", str(status["env_file"]))
-        table.add_row("Arquivo .env existe", "✅" if status["env_file_exists"] else "❌")
-
-        console.print(table)
-
-        # Configuração específica
-        if status["config"]:
-            config_table = Table(title="Configuração do Serviço")
-            config_table.add_column("Chave", style="cyan")
-            config_table.add_column("Valor", style="yellow")
-
-            for key, value in status["config"].items():
-                config_table.add_row(key, str(value))
-
-            console.print(config_table)
-
-    # Métodos privados auxiliares
-
-    def _setup_environment(self) -> bool:
-        """
-        Configura ambiente do serviço.
-
-        Returns:
-            True se configurou com sucesso
-        """
-        try:
-            # Criar .env se não existir
-            if not self.env_file.exists():
-                example_file = self.base_path / ".env.example"
-                if example_file.exists():
-                    self.env_manager.setup_env(
-                        source=example_file,
-                        dest=self.env_file
-                    )
-                else:
-                    console.print(f"⚠️  {example_file} não encontrado", style="yellow")
-
-            return True
-        except Exception as e:
-            console.print(f"❌ Erro ao configurar ambiente: {e}", style="red")
-            return False
-
-    def _load_environment(self) -> bool:
-        """
-        Carrega variáveis de ambiente.
-
-        Returns:
-            True se carregou com sucesso
-        """
-        try:
-            if self.env_file.exists():
-                self.env_manager.load_env(self.env_file)
-            return True
-        except Exception as e:
-            console.print(f"❌ Erro ao carregar ambiente: {e}", style="red")
-            return False
-
-    def _validate_prerequisites(self) -> bool:
-        """
-        Valida pré-requisitos básicos do serviço.
-
-        Returns:
-            True se válidos
-        """
-        # Implementação padrão - pode ser sobrescrita
-        return True
-
-    def _validate_required_vars(self) -> bool:
-        """
-        Valida variáveis obrigatórias.
-
-        Returns:
-            True se válidas
-        """
-        try:
-            required = self.get_required_vars()
-            if required:
-                self.env_manager.validate_required(required)
-            return True
-        except Exception as e:
-            console.print(f"❌ Erro ao validar variáveis: {e}", style="red")
-            return False
-
-    def _validate_service_config(self) -> bool:
-        """
-        Valida configuração específica do serviço.
-
-        Returns:
-            True se válida
-        """
-        # Implementação padrão - pode ser sobrescrita
-        return True
+        if self.stop():
+            time.sleep(2)
+            return self.start()
+        return False
