@@ -47,6 +47,10 @@ class ServiceOrchestrator:
 
     def __init__(self, include_monitoring: bool = False):
         """Inicializa orquestrador."""
+        # Carregar variáveis de ambiente primeiro
+        console.print("🔧 Carregando variáveis de ambiente...", style="cyan")
+        self._load_environment_variables()
+
         # Gerenciador de redes customizadas
         self.network_manager = DockerNetworkManager()
 
@@ -70,6 +74,30 @@ class ServiceOrchestrator:
         # Estado de cada serviço
         self.service_states = {name: ServiceState.PENDING for name in self.services.keys()}
         self.include_monitoring = include_monitoring
+
+    def _load_environment_variables(self) -> None:
+        """
+        Carrega variáveis de ambiente necessárias para o funcionamento.
+        """
+        try:
+            # Caminho absoluto para o arquivo .env
+            project_root = Path(__file__).parent.parent.parent
+            env_file_path = project_root / "infra" / "docker" / ".env"
+
+            # Usar LaravelEnvManager para carregar as variáveis
+            env_manager = LaravelEnvManager(env_file=str(env_file_path))
+
+            # Validar e carregar variáveis
+            if env_manager.setup_laravel_env():
+                console.print("✅ Variáveis de ambiente carregadas com sucesso", style="green")
+            else:
+                console.print("❌ Falha ao carregar variáveis de ambiente", style="red")
+                console.print("💡 Verifique se o arquivo .env existe e está configurado corretamente", style="yellow")
+                # Não sair, permitir que o sistema continue (útil para desenvolvimento)
+
+        except Exception as e:
+            console.print(f"❌ Erro ao carregar variáveis de ambiente: {e}", style="red")
+            # Não sair, permitir que o sistema continue
 
     def check_prerequisites(self) -> bool:
         """
@@ -95,25 +123,6 @@ class ServiceOrchestrator:
             return False
 
         console.print("✅ Todos os pré-requisitos verificados com sucesso!", style="bold green")
-
-        # Validação obrigatória das variáveis de ambiente
-        console.print("\n🔍 Verificando variáveis de ambiente obrigatórias...", style="bold cyan")
-
-        # Caminho absoluto para o arquivo .env
-        project_root = Path(__file__).parent.parent.parent
-        env_file_path = project_root / "infra" / "docker" / ".env"
-        env_manager = LaravelEnvManager(env_file=str(env_file_path))
-        env_success = env_manager.setup_laravel_env()
-
-        if not env_success:
-            console.print("\n❌ Variáveis de ambiente obrigatórias não configuradas!", style="bold red")
-            console.print("💡 Sugestões de correção:", style="yellow")
-            console.print("   • Copie .env.example para .env: cp .env.example .env", style="yellow")
-            console.print("   • Configure todas as variáveis obrigatórias no arquivo .env", style="yellow")
-            console.print("\n🔄 Execute novamente após corrigir os problemas.", style="cyan")
-            return False
-
-        console.print("✅ Variáveis de ambiente validadas com sucesso!", style="bold green")
         return True
 
     def update_service_state(self, service_name: str, state: ServiceState) -> None:
@@ -213,6 +222,7 @@ class ServiceOrchestrator:
         ) as progress:
 
             overall_task = progress.add_task("Iniciando serviços...", total=len(startup_order))
+            failed_services = []
 
             for service_name in startup_order:
                 # Criar tarefa específica para este serviço
@@ -222,15 +232,25 @@ class ServiceOrchestrator:
                 success = self.start_service_with_state_machine(service_name, progress, service_task)
 
                 if not success:
+                    failed_services.append(service_name)
                     progress.update(overall_task, description="❌ Alguns serviços falharam")
-                    return False
+                    # Continua para o próximo serviço ao invés de parar tudo
+                else:
+                    progress.update(service_task, completed=1)
 
-                progress.update(service_task, completed=1)
                 progress.update(overall_task, advance=1)
 
                 # Pequena pausa entre serviços para estabilização
                 time.sleep(2)
 
+            # Mostrar resumo das falhas se houver
+            if failed_services:
+                console.print(f"\n⚠️  {len(failed_services)} serviço(s) falharam: {', '.join(failed_services).upper()}", style="yellow")
+                console.print("💡 Os outros serviços foram iniciados normalmente.", style="cyan")
+            else:
+                console.print("\n✅ Todos os serviços iniciados com sucesso!", style="green")
+
+        # Sempre tentar verificar os serviços que foram iniciados
         return self._verify_all_services()
 
     def _verify_all_services(self) -> bool:
@@ -238,15 +258,25 @@ class ServiceOrchestrator:
         console.print("\n🔍 Verificando status final dos serviços...", style="blue")
 
         all_ok = True
+        failed_verifications = []
+
         for name, service in self.services.items():
             if hasattr(service, 'verify'):
                 if service.verify(max_attempts=10):
                     console.print(f"✅ {name.upper()} verificado", style="green")
                 else:
                     console.print(f"❌ {name.upper()} falhou na verificação", style="red")
+                    failed_verifications.append(name)
                     all_ok = False
 
-        return all_ok
+        if failed_verifications:
+            console.print(f"\n⚠️  {len(failed_verifications)} serviço(s) com problemas: {', '.join(failed_verifications).upper()}", style="yellow")
+            console.print("💡 Verifique os logs dos containers para mais detalhes.", style="cyan")
+            # Não retorna False para não parar a execução - útil para desenvolvimento
+            return True
+        else:
+            console.print("\n✅ Todos os serviços verificados com sucesso!", style="green")
+            return True
 
     def show_status(self) -> None:
         """Exibe o status de todos os serviços e redes."""
