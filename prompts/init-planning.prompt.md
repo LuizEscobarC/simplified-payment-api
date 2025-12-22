@@ -1,99 +1,38 @@
- 
- # DB plan
- - [ ] modelagem de banco de dados mysql para usuários, lojistas, transações, notificações, auditoria e logs.
- - [ ] criar migrations para todas as tabelas.
- - [ ] criar seeders para popular tabelas com dados iniciais. (cadastro não será avaliado).
- - [ ] criar factorys para popular tabelas com dados de teste.
- - [ ] criar índices para otimizar consultas frequentes sem prejudicar os campos a serem atualizados.
- - [ ] para testes de integração utilizar banco em memória sqlite.
+# Plano de Desenvolvimento: API de Pagamentos Simplificada (Fintech)
 
- # Setup inicial do projeto
- - [ ] implementar microserviço em python para subir automaticamente os serviços docker localmente seguindo as boas praticas de cultura devops.
- 
- 
- 
- - [ ] implementar uma estrutura de ci para continuos integration no github actions merge.
- - [ ] implementar o git hooks para padronizar commits, branches, rodar testes, linting e formatação.
- - [ ] implementar laravel 11 e estrutura inicial
-  - [ ] 
- - [ ] implementar setup inicial de testes basicos.
- - [ ] planejar pattern a serem utilizados para solucionar os problemas.
- - [ ] planejar arquitetura do sistema.
-  - [ ] utilizar restful api
-  - [ ] utilizar arquitetura em camadas
-  - [ ] utilizar design patterns:
-    - [ ] repository pattern
-    - [ ] decorator pattern para cache
-    - [ ] service layer pattern para use cases
-    - [ ] strategy pattern para split de pagamento.
-    - [ ] factory pattern para criação de estratégias de pagamento.
-    - [ ] observer pattern para eventos do sistema.
-    - [ ] circuit breaker para chamadas externas.
-    - [ ] event sourcing para auditoria.
-    - [ ] facade pattern para observabilidade e monitoramento.
-    - [ ] innoDB com transactions para garantir integridade e atomicidade de dados nas transações financeiras (não tem como fazer 2 saques do mesmo valor ao mesmo tempo resulta em problemas).
-    - [ ] utilizar redis  queue como mensage broker para integrações externas.
-    - [ ] utilizar redis cache para otimização de consultas frequentes.
-    - [ ] utilizar redis queue para processamento de transações.
-    - [ ] utilizar Rules Engine para regras de negócio.
-    - [ ] utilizar o pattern State Machine para gerenciar os estados das transações financeiras.
-- [ ] utilizar mongo para armazenamento de logs e auditoria.
-- [ ] mongo para armazenamento de eventos do sistema.
-- [ ] começar com testes de integração tdd
-- [ ] testes unitários vem por último para refinar e cobrir toda a aplicação.
-- [ ] tdd é melhor em soluções delicadas.
+## 1. Análise de Requisitos e Regras de Negócio
+- [ ] Vamos começar analisando os requisitos e regras de negócio, focando em compliance para fintech. Precisamos documentar regras críticas como cadastros seguros com CPF/CNPJ e e-mails únicos, transferências onde só usuários comuns enviam dinheiro e lojistas recebem, validação de saldo para evitar overdrafts, autorização externa com fallback, transações atômicas com rollback, e notificações resilientes via queue.
+- [ ] O contrato da API será RESTful, com endpoint POST /transfer aceitando JSON com value, payer, payee e correlation_id. Respostas padronizadas, idempotência via correlation_id, cache por 24h, e rate limiting básico.
 
-- [ ] aplicar Circuit breaker + observabilidade + Redundancia/fallback + retry e backoff exponencial para chamadas externas (imaginando que seja idempotente, circuit breaker).
+## 2. Planejamento Arquitetural e Tecnológico
+- [ ] Na arquitetura, vamos usar um monolito modular com CQRS eventual para queries pesadas, camadas claras: controllers, services, models, repos.
+- [ ] Tecnologias: Laravel 11 para robustez, MySQL InnoDB para ACID, MongoDB para event sourcing com sharding, Redis cluster para cache/queue, e testes com PHPUnit e SQLite.
+- [ ] Padrões de design: Repository para abstração DB, Service Layer para lógica, Strategy para pagamentos, Strategy para multiplas notificações (sms, email, slack), Observer para eventos, Decorator para cache, State Machine para transações, Circuit Breaker para externos, Event Sourcing com MongoDB para logs imutáveis, Facade para observabilidade, Rules Engine para validações dinâmicas, e Policy Pattern para autorização granular, como verificar se payer é usuário e tem saldo.
+- [ ] Segurança: Criptografia AES-256, validação sanitizada, JWT simulado, RBAC via Policies, logs SIEM, rate limiting, backups automáticos.
 
+## 3. Diagramas Técnicos
+- [ ] Diagramas: ER para MySQL, schema MongoDB com collections transfer_events e notification_logs (append-only, TTL), arquitetura do ecossistema, e fluxo de transferência.
 
+## 4. Setup Inicial do Projeto e Infraestrutura
+- [ ] Infra: Docker com compose para MySQL replicado, Redis cluster, Nginx, PHP-FPM, orquestrador Python, Prometheus. Somente CI GitHub Actions com build/test/lint. Git hooks para qualidade e versionamento.
 
-# regras de negócio
-  - Para ambos tipos de usuário, precisamos do Nome Completo, CPF, e-mail e Senha. CPF/CNPJ e e-mails devem ser únicos no sistema. Sendo assim, seu sistema deve permitir apenas um cadastro com o mesmo CPF ou endereço de e-mail;
-  - Usuários podem enviar dinheiro (efetuar transferência) para lojistas e entre usuários;
-  - Lojistas só recebem transferências, não enviam dinheiro para ninguém;
-  - Validar se o usuário tem saldo antes da transferência;
-  - Antes de finalizar a transferência, deve-se consultar um serviço autorizador externo, use este mock https://util.devi.tools/api/v2/authorize para simular o serviço utilizando o verbo GET;
-  - A operação de transferência deve ser uma transação (ou seja, revertida em qualquer caso de inconsistência) e o dinheiro deve voltar para a carteira do usuário que envia;
-  - No recebimento de pagamento, o usuário ou lojista precisa receber notificação (envio de email, sms) enviada por um serviço de terceiro e eventualmente este serviço pode estar indisponível/instável. Use este mock https://util.devi.tools/api/v1/notify)) para simular o envio da notificação utilizando o verbo POST;
-  - Este serviço deve ser RESTFul.
+## 5. Modelagem e Implementação do Banco de Dados
+- [ ] Banco: Schema MySQL otimizado com constraints, migrations seguras, seeders/factories para testes.
 
-## Endpoint de transferência
- - Você pode implementar o que achar conveniente, porém vamos nos atentar somente ao fluxo de transferência entre dois usuários. A implementação deve seguir o contrato abaixo.
-  
-```json
-POST /transfer
-Content-Type: application/json
+## 6. Implementação da API e Lógica de Negócio
+- [ ] API: Setup Laravel com middlewares, endpoint /transfer com validações, Policy, transação DB, events. Padrões integrados via DI, queue async.
 
-{
-  "value": 100.0,
-  "payer": 4,
-  "payee": 15
-}
-```
+## 7. Integrações Externas e Resiliência
+- [ ] Integrações: Circuit Breaker, idempotência Redis, queue dead-letter.
 
-## Avaliação
-Apresente sua solução utilizando o framework que você desejar, justificando a escolha. Atente-se a cumprir a maioria dos requisitos, pois você pode cumprir-los parcialmente e durante a avaliação vamos bater um papo a respeito do que faltou.
+## 8. Testes e Qualidade de Código
+- [ ] Testes: TDD para transferências, cobertura 95%+, ferramentas PHPStan/PHPMD/CS-Fixer.
 
-* Conhecimentos sobre REST
-* Uso do Git
-* Capacidade analítica
-* Apresentação de código limpo e organizado
+## 9. Observabilidade, Auditoria e Segurança
+- [ ] Observabilidade: ELK, event sourcing MongoDB, projections CQRS, segurança penetration testing.
 
-* Aderência a recomendações de implementação como as PSRs
-* Aplicação e conhecimentos de SOLID
-* Identificação e aplicação de Design Patterns
-* Noções de funcionamento e uso de Cache
-* Conhecimentos sobre conceitos de containers (Docker, Podman etc)
-* Documentação e descrição de funcionalidades e manuseio do projeto
-* Implementação e conhecimentos sobre testes de unidade e integração
-* Identificar e propor melhorias
-* Boas noções de bancos de dados relacionais
-* Aplicação de conhecimentos de observabilidade
-* Utilização de CI para rodar testes e análises estáticas
-* Conhecimentos sobre bancos de dados não-relacionais
-* Aplicação de arquiteturas (CQRS, Event-sourcing, Microsserviços, Monolito modular)
-* Uso e implementação de mensageria
-* Noções de escalabilidade
-* Boas habilidades na aplicação do conhecimento do negócio no software
-* Implementação margeada por ferramentas de qualidade (análise estática, PHPMD, PHPStan, PHP-CS-Fixer etc)
-* Noções de PHP assíncrono
+## 10. Documentação e Finalização
+- [ ] Documentação: Swagger, Postman, README detalhado.
+
+## Critérios de Avaliação
+- [ ] Critérios: REST, Git, SOLID, Patterns, Cache, Containers, Tests, DBs, Observabilidade, CI, Arquiteturas, Mensageria, Escalabilidade, Negócio, Qualidade, PHP Async. Destaques: Compliance, Segurança, Escalabilidade, Resiliência, Diagramas.

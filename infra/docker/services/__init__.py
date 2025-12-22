@@ -1,15 +1,19 @@
-# scripts/services/__init__.py
+# infra/docker/services/__init__.py
 """
-Módulos de serviços para o sistema de setup.
+Módulos de serviços Docker para o sistema.
 
 Este pacote contém classes de serviço para gerenciar diferentes
-componentes do sistema (Docker, MySQL, Laravel, etc.).
+componentes Docker do sistema (Redis, MySQL, MongoDB).
 """
 
-from .base_service import BaseService
-from .neo_backend_service import NeoBackendService
+from .base_service import BaseDockerService
+from .redis_service import RedisService
+from .mysql_service import MySQLService
+from .mongodb_service import MongoDBService
 
 __all__ = [
-    "BaseService",
-    "NeoBackendService"
+    "BaseDockerService",
+    "RedisService",
+    "MySQLService",
+    "MongoDBService"
 ]
