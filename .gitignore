@@ -1,13 +1,15 @@
 # ============================================
 # Python
 # ============================================
-
 # Ambientes virtuais
 .venv/
 venv/
 env/
 ENV/
 .virtualenv/
+# Ferramentas de desenvolvimento (baixadas automaticamente)
+infra/tools/
+!infra/tools/.gitkeep
 
 # Bytecode compilado
 __pycache__/
