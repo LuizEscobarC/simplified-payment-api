@@ -127,8 +127,11 @@ class GitHooksService(BaseDockerService):
             "phpmd"
         )
 
-        # PHPStan via Composer (se não estiver instalado)
-        self._install_phpstan()
+        # PHPStan
+        self._download_phar(
+            "https://github.com/phpstan/phpstan/releases/download/1.10.50/phpstan.phar",
+            "phpstan"
+        )
 
     def _download_phar(self, url: str, name: str) -> None:
         """Download e instalação de PHAR."""
@@ -146,39 +149,6 @@ class GitHooksService(BaseDockerService):
             console.print(f"✅ {name}: instalado em {phar_path}")
         except Exception as e:
             console.print(f"❌ Falha ao baixar {name}: {e}")
-
-    def _install_phpstan(self) -> None:
-        """Instala PHPStan via Composer."""
-        composer_json = self.project_root / "api" / "composer.json"
-
-        if not composer_json.exists():
-            console.print("❌ composer.json não encontrado")
-            return
-
-        # Verificar se já está instalado
-        try:
-            result = subprocess.run(
-                ["./vendor/bin/phpstan", "--version"],
-                cwd=self.project_root / "api",
-                capture_output=True,
-                text=True
-            )
-            if result.returncode == 0:
-                console.print("✅ PHPStan: já instalado via Composer")
-                return
-        except:
-            pass
-
-        console.print("📦 Instalando PHPStan via Composer...")
-        try:
-            subprocess.run(
-                ["composer", "require", "--dev", "phpstan/phpstan"],
-                cwd=self.project_root / "api",
-                check=True
-            )
-            console.print("✅ PHPStan: instalado via Composer")
-        except subprocess.CalledProcessError as e:
-            console.print(f"❌ Falha ao instalar PHPStan: {e}")
 
     def _setup_husky(self) -> None:
         """Configura Husky para Git hooks."""
@@ -260,7 +230,7 @@ echo "🔬 Executando análise estática completa..."
 # PHPStan
 echo "🔍 Executando PHPStan..."
 cd api
-./vendor/bin/phpstan analyse app/ || {
+../infra/tools/phpstan analyse app/ || {
     echo "❌ PHPStan encontrou erros. Corrija antes de fazer push."
     exit 1
 }
