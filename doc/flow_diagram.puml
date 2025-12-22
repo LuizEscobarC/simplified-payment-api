@@ -1,0 +1,43 @@
+@startuml Sequence Diagram - Transfer Flow
+actor User
+participant Controller
+participant Service
+participant CircuitBreaker
+participant Authorizer
+participant Repository
+participant AuditLog
+participant EventSourcing
+participant Redis
+participant Mongo
+User -> Controller: POST /transfer
+Controller -> Controller: authorize via TransferPolicy
+Controller -> Service: executeTransfer()
+Service -> EventSourcing: storeEvent("transfer_initiated", data)
+EventSourcing -> Mongo: save to transfer_events
+Service -> Service: validateBalance()
+Service -> EventSourcing: storeEvent("balance_validated", data)
+EventSourcing -> Mongo: save to transfer_events
+Service -> CircuitBreaker: call(authorize)
+CircuitBreaker -> Authorizer: GET /authorize
+Authorizer --> CircuitBreaker: approved/rejected
+CircuitBreaker --> Service: result
+Service -> EventSourcing: storeEvent("authorization_requested", data)
+EventSourcing -> Mongo: save to transfer_events
+alt approved
+  Service -> Repository: updateBalances()
+  Service -> AuditLog: logAction("transfer", data)
+  Service -> EventSourcing: storeEvent("transfer_completed", data)
+  EventSourcing -> Mongo: save to transfer_events
+  Service -> Redis: queueNotification()
+  Service -> Mongo: log to notification_logs
+  Service --> Controller: success
+else rejected
+  Service -> AuditLog: logAction("transfer_failed", data)
+  Service -> EventSourcing: storeEvent("transfer_failed", data)
+  EventSourcing -> Mongo: save to transfer_events
+  Service -> Repository: rollback()
+  Service --> Controller: error
+end
+Redis -> NotificationJob: processQueue()
+NotificationJob -> External: POST /notify
+@enduml

@@ -1,0 +1,74 @@
+@startuml Class Diagram
+class TransferController {
+  + transfer(Request): JsonResponse
+}
+class TransferService {
+  + executeTransfer(array): Transaction
+  - validateBalance(User, float): bool
+  - callAuthorizer(string): bool
+  - updateBalances(Transaction): void
+  - dispatchNotification(Transaction): void
+}
+interface TransferRepositoryInterface {
+  + findById(int): Transaction
+  + save(Transaction): void
+}
+class EloquentTransferRepository implements TransferRepositoryInterface {
+  + findById(int): Transaction
+  + save(Transaction): void
+}
+class User {
+  + id: int
+  + name: string
+  + cpf_cnpj: string
+  + email: string
+  + balance: float
+  + type: string
+}
+class Transaction {
+  + id: int
+  + payer_id: int
+  + payee_id: int
+  + value: float
+  + status: string
+  + correlation_id: string
+}
+class NotificationJob {
+  + handle(): void
+}
+class AuthorizerService {
+  + authorize(string): bool
+}
+class CircuitBreaker {
+  + call(callable): mixed
+}
+class AuditLog {
+  + logAction(string, array): void
+}
+class EventSourcing {
+  + storeEvent(string, array): void
+}
+class EventRepository {
+  + saveEvent(array): void
+  + getEventsByAggregateId(string): array
+}
+class NotificationLog {
+  + logNotification(array): void
+}
+class TransferPolicy {
+  + transfer(User $user, array $data): bool
+  - canSendMoney(User $payer): bool
+  - hasSufficientBalance(User $payer, float $value): bool
+}
+TransferController --> TransferService
+TransferController --> TransferPolicy
+TransferService --> TransferRepositoryInterface
+TransferService --> AuthorizerService
+TransferService --> CircuitBreaker
+TransferService --> AuditLog
+TransferService --> EventSourcing
+TransferService --> NotificationLog
+EloquentTransferRepository --> Transaction
+TransferService --> NotificationJob
+EventSourcing --> EventRepository
+@enduml

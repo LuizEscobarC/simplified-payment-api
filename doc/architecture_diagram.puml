@@ -1,0 +1,27 @@
+@startuml Architecture Diagram
+node "Client (Mobile/Web)" as Client
+node "API Gateway (Nginx)" as Gateway
+node "Laravel App (PHP-FPM)" as App
+note right of App : Controllers, Services, Policies (Authorization)\nEvent Sourcing, Circuit Breaker
+database "MySQL (InnoDB)" as MySQL
+database "MongoDB (Sharded)" as Mongo
+database "Redis Cluster" as Redis
+node "External Services" as External
+node "Circuit Breaker" as CB
+node "ELK Stack" as ELK
+node "Prometheus" as Prom
+node "Python Orchestrator" as Orchestrator
+Client --> Gateway
+Gateway --> App
+App --> MySQL : Transactions/Audit
+App --> Mongo : Events/Logs
+App --> Redis : Cache/Queue
+App --> External : Authorizer/Notify
+App --> CB : Fault Tolerance
+App --> ELK : Logs/Monitoring
+App --> Prom : Metrics
+Orchestrator --> App : Auto-scaling
+note right of Redis : Cache: User balances\nQueue: Notifications\nPubSub: Events
+note right of Mongo : Event Sourcing (transfer_events)\nNotification Logs (notification_logs)\nTTL Indexes for cleanup
+note right of CB : Fallback para autorizador
+@enduml
