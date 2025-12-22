@@ -59,8 +59,7 @@ class ServiceOrchestrator:
             'mysql': MySQLService(),
             'mongodb': MongoDBService(),
             'laravel': LaravelService(),
-            'nginx': NginxService(),
-            'git-hooks': GitHooksService()
+            'nginx': NginxService()
         }
 
         if include_monitoring:
@@ -207,12 +206,12 @@ class ServiceOrchestrator:
         if not self.network_manager.update_compose_files():
             console.print("⚠️  Alguns arquivos docker-compose podem não ter sido atualizados", style="yellow")
 
-        # Ordem de inicialização (dependências)
-        startup_order = ['redis', 'mysql', 'mongodb', 'laravel', 'nginx']
-
-        if self.include_monitoring:
-            startup_order.extend(['elasticsearch', 'logstash', 'kibana', 'prometheus'])
-
+        # Ordem de inicialização com dependências críticas
+        startup_order = ['redis', 'mysql', 'mongodb']  # Bancos primeiro
+        
+        # Só iniciar app se bancos estiverem OK (verificar depois dos bancos)
+        critical_services_ok = True
+        
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -221,27 +220,50 @@ class ServiceOrchestrator:
             console=console
         ) as progress:
 
-            overall_task = progress.add_task("Iniciando serviços...", total=len(startup_order))
+            # Primeiro iniciar bancos críticos
+            overall_task = progress.add_task("Iniciando bancos de dados...", total=len(startup_order))
             failed_services = []
 
             for service_name in startup_order:
-                # Criar tarefa específica para este serviço
                 service_task = progress.add_task(f"Preparando {service_name.upper()}...", total=1)
-
-                # Iniciar serviço usando máquina de estados
                 success = self.start_service_with_state_machine(service_name, progress, service_task)
 
                 if not success:
                     failed_services.append(service_name)
-                    progress.update(overall_task, description="❌ Alguns serviços falharam")
-                    # Continua para o próximo serviço ao invés de parar tudo
+                    critical_services_ok = False
+                    progress.update(overall_task, description="❌ Banco crítico falhou")
                 else:
                     progress.update(service_task, completed=1)
 
                 progress.update(overall_task, advance=1)
-
-                # Pequena pausa entre serviços para estabilização
                 time.sleep(2)
+
+            # Verificar se bancos críticos estão OK antes de iniciar app
+            if critical_services_ok:
+                # Adicionar serviços da aplicação
+                app_services = ['laravel', 'nginx']
+                if self.include_monitoring:
+                    app_services.extend(['elasticsearch', 'logstash', 'kibana', 'prometheus'])
+                
+                startup_order.extend(app_services)
+                
+                # Iniciar serviços da aplicação
+                app_task = progress.add_task("Iniciando aplicação...", total=len(app_services))
+                
+                for service_name in app_services:
+                    service_task = progress.add_task(f"Preparando {service_name.upper()}...", total=1)
+                    success = self.start_service_with_state_machine(service_name, progress, service_task)
+
+                    if not success:
+                        failed_services.append(service_name)
+                        progress.update(app_task, description="❌ Serviço da aplicação falhou")
+                    else:
+                        progress.update(service_task, completed=1)
+
+                    progress.update(app_task, advance=1)
+                    time.sleep(2)
+            else:
+                console.print("⚠️  Bancos críticos falharam - pulando serviços dependentes", style="yellow")
 
             # Mostrar resumo das falhas se houver
             if failed_services:
@@ -261,6 +283,11 @@ class ServiceOrchestrator:
         failed_verifications = []
 
         for name, service in self.services.items():
+            # Pular serviços que falharam na inicialização
+            if self.service_states.get(name) == ServiceState.FAILED:
+                console.print(f"⏭️  {name.upper()} pulado (falhou na inicialização)", style="yellow")
+                continue
+                
             if hasattr(service, 'verify'):
                 if service.verify(max_attempts=10):
                     console.print(f"✅ {name.upper()} verificado", style="green")
@@ -277,31 +304,6 @@ class ServiceOrchestrator:
         else:
             console.print("\n✅ Todos os serviços verificados com sucesso!", style="green")
             return True
-
-    def show_status(self) -> None:
-        """Exibe o status de todos os serviços e redes."""
-        console.print("📊 Status dos Serviços e Redes", style="bold blue")
-        console.print("=" * 50, style="blue")
-
-        # Status das redes
-        console.print("\n🌐 Redes Docker Customizadas:", style="cyan")
-        self.network_manager.show_network_status()
-
-        # Status dos serviços
-        console.print("\n🔧 Serviços:", style="cyan")
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Serviço", style="cyan", no_wrap=True)
-        table.add_column("Status", style="green")
-        table.add_column("Porta", style="yellow")
-        table.add_column("Container", style="white")
-
-        for name, service in self.services.items():
-            status = self._check_service_status(name, service)
-            port = getattr(service, 'port', 'N/A')
-            container = getattr(service, 'container_name', 'N/A')
-            table.add_row(name.upper(), status, str(port), container)
-
-        console.print(table)
 
     def stop_all_services(self) -> bool:
         """Para todos os serviços."""
@@ -330,28 +332,20 @@ class ServiceOrchestrator:
             String com status formatado
         """
         try:
-            # Primeiro verifica se está no status armazenado
-            if service_name in self.status:
-                return self.status[service_name]
-
-            # Se não tem status armazenado, verifica se o container está rodando
-            if hasattr(service, 'container_name'):
-                import subprocess
-                result = subprocess.run(
-                    ["docker", "ps", "--filter", f"name={service.container_name}", "--format", "{{.Status}}"],
-                    capture_output=True,
-                    text=True
-                )
-
-                if result.returncode == 0 and result.stdout.strip():
-                    status = result.stdout.strip()
-                    if "Up" in status:
-                        return "✅ Rodando"
-                    else:
-                        return f"⚠️  {status}"
-
-            return "❌ Parado"
-
+            # Primeiro verifica o estado armazenado
+            state = self.service_states.get(service_name, ServiceState.PENDING)
+            
+            # Mapeia estado para string formatada
+            state_map = {
+                ServiceState.PENDING: "⏳ Pendente",
+                ServiceState.STARTING: "🚀 Iniciando",
+                ServiceState.VERIFYING: "🔍 Verificando", 
+                ServiceState.READY: "✅ Pronto",
+                ServiceState.FAILED: "❌ Falhou"
+            }
+            
+            return state_map.get(state, "❓ Desconhecido")
+            
         except Exception as e:
             return f"❌ Erro: {str(e)}"
 
@@ -393,6 +387,12 @@ class ServiceOrchestrator:
                 console.print(f"✅ {name.upper()} limpo", style="green")
             except Exception as e:
                 console.print(f"⚠️  Erro ao limpar {name.upper()}: {e}", style="yellow")
+
+    def setup_git_hooks(self) -> bool:
+        """Configura Git hooks separadamente."""
+        console.print("🔧 Configurando Git hooks...", style="cyan")
+        hooks_service = GitHooksService()
+        return hooks_service.start()
 
 
 def main():
@@ -447,8 +447,7 @@ def main():
         orchestrator.cleanup_all()
 
     elif args.action == "hooks":
-        hooks_service = GitHooksService()
-        if hooks_service.start():
+        if orchestrator.setup_git_hooks():
             console.print("✅ Git hooks configurados com sucesso!", style="green")
         else:
             console.print("❌ Falha ao configurar Git hooks!", style="red")
