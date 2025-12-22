@@ -25,6 +25,7 @@ from services.mongodb_service import MongoDBService
 from services.laravel_service import LaravelService
 from services.nginx_service import NginxService
 from services.monitoring_service import ElasticsearchService, LogstashService, KibanaService, PrometheusService
+from services.git_hooks_service import GitHooksService
 from scripts.prerequisites import PrerequisiteChecker
 from scripts import DockerNetworkManager
 
@@ -53,7 +54,8 @@ class ServiceOrchestrator:
             'mysql': MySQLService(),
             'mongodb': MongoDBService(),
             'laravel': LaravelService(),
-            'nginx': NginxService()
+            'nginx': NginxService(),
+            'git-hooks': GitHooksService()
         }
 
         if include_monitoring:
@@ -348,7 +350,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Orquestrador de Serviços para API de Pagamentos")
-    parser.add_argument("action", choices=["start", "stop", "status", "cleanup"],
+    parser.add_argument("action", choices=["start", "stop", "status", "cleanup", "hooks"],
                        help="Ação a executar")
     parser.add_argument("--no-wait", action="store_true",
                        help="Não aguardar serviços ficarem prontos")
@@ -393,6 +395,14 @@ def main():
 
     elif args.action == "cleanup":
         orchestrator.cleanup_all()
+
+    elif args.action == "hooks":
+        hooks_service = GitHooksService()
+        if hooks_service.start():
+            console.print("✅ Git hooks configurados com sucesso!", style="green")
+        else:
+            console.print("❌ Falha ao configurar Git hooks!", style="red")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
