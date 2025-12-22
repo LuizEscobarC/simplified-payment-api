@@ -27,6 +27,7 @@ from services.nginx_service import NginxService
 from services.monitoring_service import ElasticsearchService, LogstashService, KibanaService, PrometheusService
 from services.git_hooks_service import GitHooksService
 from scripts.prerequisites import PrerequisiteChecker
+from scripts.env_manager import LaravelEnvManager
 from scripts import DockerNetworkManager
 
 console = Console()
@@ -94,6 +95,25 @@ class ServiceOrchestrator:
             return False
 
         console.print("✅ Todos os pré-requisitos verificados com sucesso!", style="bold green")
+
+        # Validação obrigatória das variáveis de ambiente
+        console.print("\n🔍 Verificando variáveis de ambiente obrigatórias...", style="bold cyan")
+
+        # Caminho absoluto para o arquivo .env
+        project_root = Path(__file__).parent.parent.parent
+        env_file_path = project_root / "infra" / "docker" / ".env"
+        env_manager = LaravelEnvManager(env_file=str(env_file_path))
+        env_success = env_manager.setup_laravel_env()
+
+        if not env_success:
+            console.print("\n❌ Variáveis de ambiente obrigatórias não configuradas!", style="bold red")
+            console.print("💡 Sugestões de correção:", style="yellow")
+            console.print("   • Copie .env.example para .env: cp .env.example .env", style="yellow")
+            console.print("   • Configure todas as variáveis obrigatórias no arquivo .env", style="yellow")
+            console.print("\n🔄 Execute novamente após corrigir os problemas.", style="cyan")
+            return False
+
+        console.print("✅ Variáveis de ambiente validadas com sucesso!", style="bold green")
         return True
 
     def update_service_state(self, service_name: str, state: ServiceState) -> None:
