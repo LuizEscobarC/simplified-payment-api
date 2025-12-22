@@ -1,0 +1,14 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔬 Executando análise estática completa..."
+
+# PHPStan
+echo "🔍 Executando PHPStan..."
+cd api
+../infra/tools/phpstan analyse app/ || {
+    echo "❌ PHPStan encontrou erros. Corrija antes de fazer push."
+    exit 1
+}
+
+echo "✅ Análise estática concluída!"

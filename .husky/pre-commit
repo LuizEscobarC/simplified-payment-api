@@ -1,0 +1,31 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Executando verificações de qualidade de código..."
+
+# Laravel Pint
+echo "🎨 Executando Laravel Pint..."
+cd api
+./vendor/bin/pint --test || {
+    echo "❌ Laravel Pint encontrou problemas. Corrigindo..."
+    ./vendor/bin/pint
+    git add .
+}
+
+# PHP-CS-Fixer
+echo "🔧 Executando PHP-CS-Fixer..."
+cd ..
+infra/tools/php-cs-fixer fix api/ --dry-run --diff || {
+    echo "❌ PHP-CS-Fixer encontrou problemas. Corrigindo..."
+    infra/tools/php-cs-fixer fix api/
+    git add .
+}
+
+# PHPMD
+echo "📊 Executando PHPMD..."
+infra/tools/phpmd api/app text cleancode,codesize,controversial,design,naming,unusedcode || {
+    echo "⚠️ PHPMD encontrou problemas. Revise o código."
+    exit 1
+}
+
+echo "✅ Verificações de qualidade concluídas!"
