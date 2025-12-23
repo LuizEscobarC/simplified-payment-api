@@ -2,19 +2,31 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
+use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class AuditLogModelTest extends TestCase
 {
-    /**
-     * A basic feature test example.
-     */
-    public function test_example(): void
-    {
-        $response = $this->get('/');
+    use RefreshDatabase;
 
-        $response->assertStatus(200);
+    public function test_audit_log_creation(): void
+    {
+        $auditLog = AuditLog::factory()->create();
+
+        $this->assertDatabaseHas('audit_logs', [
+            'id' => $auditLog->id,
+            'action' => $auditLog->action,
+        ]);
+    }
+
+    public function test_audit_log_relationships(): void
+    {
+        $auditLog = AuditLog::factory()->create();
+
+        $this->assertInstanceOf(User::class, $auditLog->user);
+        $this->assertInstanceOf(Transaction::class, $auditLog->transaction);
     }
 }

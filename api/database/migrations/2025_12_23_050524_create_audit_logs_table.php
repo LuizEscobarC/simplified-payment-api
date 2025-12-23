@@ -13,7 +13,17 @@ return new class extends Migration
     {
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('transaction_id')->nullable();
+            $table->string('action');
+            $table->json('details')->nullable();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->timestamp('timestamp');
             $table->timestamps();
+
+            $table->index(['user_id', 'action', 'timestamp']);
+            $table->index(['transaction_id', 'timestamp']);
         });
     }
 

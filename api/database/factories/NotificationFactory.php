@@ -17,7 +17,12 @@ class NotificationFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'transaction_id' => \App\Models\Transaction::factory(),
+            'user_id' => \App\Models\User::factory(),
+            'type' => $this->faker->randomElement(['email', 'sms']),
+            'status' => $this->faker->randomElement(['queued', 'sent', 'failed']),
+            'message' => $this->faker->sentence(),
+            'sent_at' => $this->faker->optional()->dateTime(),
         ];
     }
 }

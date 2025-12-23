@@ -17,7 +17,11 @@ class TransactionFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'payer_id' => \App\Models\User::factory(),
+            'payee_id' => \App\Models\User::factory(),
+            'value' => $this->faker->randomFloat(2, 10, 1000),
+            'status' => $this->faker->randomElement(['pending', 'approved', 'rejected', 'failed']),
+            'correlation_id' => $this->faker->uuid(),
         ];
     }
 }

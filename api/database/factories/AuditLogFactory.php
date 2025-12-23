@@ -17,7 +17,13 @@ class AuditLogFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'user_id' => \App\Models\User::factory(),
+            'transaction_id' => \App\Models\Transaction::factory(),
+            'action' => $this->faker->word(),
+            'details' => $this->faker->optional()->randomElements(['key' => 'value']),
+            'ip_address' => $this->faker->ipv4(),
+            'user_agent' => $this->faker->userAgent(),
+            'timestamp' => $this->faker->dateTime(),
         ];
     }
 }
