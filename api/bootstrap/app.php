@@ -21,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             ForceJsonResponse::class,
         ]);
-        
+
         // Exclude specific routes from CSRF protection
         $middleware->validateCsrfTokens(except: [
             'horizon/*',
@@ -31,9 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->dontReport([
-            // 
+            //
         ]);
-        
+
         $exceptions->renderable(function (Throwable $e, $request) {
             return match (true) {
                 $e instanceof \Illuminate\Auth\AuthenticationException => response()->json([
@@ -72,6 +72,7 @@ return Application::configure(basePath: dirname(__DIR__))
                             replace: ['count' => $countErrors]
                         );
                     }
+
                     return response()->json([
                         'message' => $primaryMessage,
                         'errors' => $e->errors(),
@@ -91,7 +92,7 @@ return Application::configure(basePath: dirname(__DIR__))
                             'error' => 'authentication_required',
                         ], 401);
                     }
-                    
+
                     return response()->json([
                         'message' => $e->getMessage(),
                         'error' => 'invalid_argument',

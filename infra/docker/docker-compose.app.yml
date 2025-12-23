@@ -53,6 +53,41 @@ services:
             - payment-api-main
             - payment-api-cache
 
+    queue:
+        container_name: payment-queue
+        build:
+            context: ../..
+            dockerfile: infra/docker/php/Dockerfile.queue
+        restart: unless-stopped
+        env_file:
+            - .env
+        environment:
+            DB_CONNECTION: ${DB_CONNECTION}
+            DB_HOST: ${DB_HOST}
+            DB_DATABASE: ${DB_DATABASE}
+            DB_USERNAME: ${DB_USERNAME}
+            DB_PASSWORD: ${DB_PASSWORD}
+            DB_DADOS_CONNECTION: ${DB_DADOS_CONNECTION}
+            DB_DADOS_HOST: ${DB_DADOS_HOST}
+            DB_DADOS_DATABASE: ${DB_DADOS_DATABASE}
+            DB_DADOS_USERNAME: ${DB_DADOS_USERNAME}
+            DB_DADOS_PASSWORD: ${DB_DADOS_PASSWORD}
+            REDIS_HOST: ${REDIS_HOST}
+            REDIS_PORT: ${REDIS_PORT}
+        working_dir: /var/www/html
+        logging:
+            driver: "json-file"
+            options:
+                max-size: "10m"
+                max-file: "3"
+        volumes:
+            - ../../api/:/var/www/html
+            - ./supervisor/supervisor.conf:/etc/supervisor/conf.d/supervisor.conf
+            - ./php/${INI_FILE:-local.ini}:/usr/local/etc/php/conf.d/local.ini
+        networks:
+            - payment-api-main
+            - payment-api-cache
+
     supervisor:
         image: neobackend-supervisor:latest
         profiles:

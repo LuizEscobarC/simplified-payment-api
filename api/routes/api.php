@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +20,6 @@ Route::get('/test', function () {
     return response()->json([
         'status' => 'success',
         'message' => 'API Laravel está funcionando!',
-        'timestamp' => now()->toISOString()
+        'timestamp' => now()->toISOString(),
     ]);
 });

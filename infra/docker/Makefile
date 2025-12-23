@@ -1,5 +1,5 @@
 # Makefile for infra docker - payment api
-.PHONY: help setup start start-monitoring hooks status stop clean all
+.PHONY: help setup start start-monitoring hooks status stop clean all test lint pint
 
 # Colors for output
 GREEN := \033[0;32m
@@ -57,6 +57,19 @@ stop: ## Stop all services
 clean: ## Clean containers and volumes
 	@echo "$(YELLOW)🧹 Cleaning containers...$(NC)"
 	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 docker/orchestrator.py cleanup"
+
+test: ## Run PHP tests
+	@echo "$(BLUE)🧪 Running PHP tests...$(NC)"
+	@docker exec -it payment-api sh -c "cd /var/www/html && php artisan test"
+
+lint: ## Run PHP linters (Pint and PHPStan)
+	@echo "$(BLUE)🔍 Running PHP linters...$(NC)"
+	@docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/pint --test" && \
+	docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpstan analyse app"
+
+pint: ## Run Pint to fix PHP code style
+	@echo "$(BLUE)🎨 Running Pint to fix code style...$(NC)"
+	@docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/pint"
 
 all: ## Prepare everything and start (complete setup with orchestrator)
 	@echo "$(BLUE)🚀 Starting complete infrastructure setup...$(NC)"

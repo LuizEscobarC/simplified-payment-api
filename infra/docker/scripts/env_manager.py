@@ -33,7 +33,7 @@ class LaravelEnvManager:
             'DB_DADOS_CONNECTION', 'DB_DADOS_HOST', 'DB_DADOS_DATABASE',
             'DB_DADOS_USERNAME', 'DB_DADOS_PASSWORD',
             # Redis
-            'REDIS_HOST', 'REDIS_PORT', 'REDIS_PASSWORD',
+            'REDIS_HOST', 'REDIS_PORT',
             # Aplicação
             'APP_ENV', 'APP_ROOT',
             # Filas
@@ -41,7 +41,7 @@ class LaravelEnvManager:
         ]
         
         # Variáveis que podem ser vazias
-        self.optional_vars = ['QUEUE_OPTIONS']
+        self.optional_vars = ['QUEUE_OPTIONS', 'REDIS_PASSWORD']
 
     def validate_env_file(self) -> bool:
         """

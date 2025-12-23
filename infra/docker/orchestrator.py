@@ -23,6 +23,7 @@ from services.redis_service import RedisService
 from services.mysql_service import MySQLService
 from services.mongodb_service import MongoDBService
 from services.laravel_service import LaravelService
+from services.queue_service import QueueService
 from services.nginx_service import NginxService
 from services.monitoring_service import ElasticsearchService, LogstashService, KibanaService, PrometheusService
 from services.git_hooks_service import GitHooksService
@@ -59,6 +60,7 @@ class ServiceOrchestrator:
             'mysql': MySQLService(),
             'mongodb': MongoDBService(),
             'laravel': LaravelService(),
+            'queue': QueueService(),
             'nginx': NginxService()
         }
 
@@ -241,7 +243,7 @@ class ServiceOrchestrator:
             # Verificar se bancos críticos estão OK antes de iniciar app
             if critical_services_ok:
                 # Adicionar serviços da aplicação
-                app_services = ['laravel', 'nginx']
+                app_services = ['laravel', 'queue', 'nginx']
                 if self.include_monitoring:
                     app_services.extend(['elasticsearch', 'logstash', 'kibana', 'prometheus'])
                 
