@@ -85,6 +85,6 @@ note right of User : Índices: cpf_cnpj, email, type
 note right of Transaction : Índices: payer_id, payee_id, status, correlation_id
 note right of Notification : Índices: transaction_id, user_id, status
 note right of AuditLog : Índices: user_id, transaction_id, action, timestamp
-note right of Event : Índices: aggregate_id, aggregate_type, event_type, timestamp
+note right of TransferEvent : Índices: transfer_id, event_type, user_id, timestamp
 
 @enduml

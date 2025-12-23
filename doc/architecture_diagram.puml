@@ -20,8 +20,15 @@ App --> External : Authorizer/Notify
 App --> CB : Fault Tolerance
 App --> ELK : Logs/Monitoring
 App --> Prom : Metrics
-Orchestrator --> App : Auto-scaling
+Orchestrator --> Gateway : Manages startup
+Orchestrator --> App : Manages startup
+Orchestrator --> MySQL : Manages startup
+Orchestrator --> Mongo : Manages startup
+Orchestrator --> Redis : Manages startup
+Orchestrator --> ELK : Manages startup
+Orchestrator --> Prom : Manages startup
 note right of Redis : Cache: User balances\nQueue: Notifications\nPubSub: Events
 note right of Mongo : Event Sourcing (transfer_events)\nNotification Logs (notification_logs)\nTTL Indexes for cleanup
 note right of CB : Fallback para autorizador
+note right of Orchestrator : Python script managing Docker services\nstartup order and health checks
 @enduml
