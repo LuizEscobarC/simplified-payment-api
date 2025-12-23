@@ -14,11 +14,14 @@ return new class extends Migration
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_id')->constrained('transactions');
-            $table->text('message');
-            $table->enum('status', ['pending', 'sent', 'failed'])->default('pending');
+            $table->foreignId('user_id')->constrained('users');
+            $table->enum('type', ['email', 'sms']);
+            $table->enum('status', ['queued', 'sent', 'failed'])->default('queued');
+            $table->text('message')->nullable();
+            $table->timestamp('sent_at')->nullable();
             $table->timestamps();
 
-            $table->index(['status', 'created_at']);
+            $table->index(['transaction_id', 'user_id', 'status']);
         });
     }
 
