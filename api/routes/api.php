@@ -14,9 +14,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// API routes here
 
 // Rota de teste para verificar se a API está funcionando
 Route::get('/test', function () {
