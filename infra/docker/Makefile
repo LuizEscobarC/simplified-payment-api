@@ -16,6 +16,8 @@ help: ## Show help
 	@echo ""
 	@echo "Available commands:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Quick start: $(GREEN)make all$(NC)"
 
 setup: ## Prepare Python environment (venv + dependencies)
 	@echo "$(BLUE)📦 Preparing Python environment...$(NC)"
