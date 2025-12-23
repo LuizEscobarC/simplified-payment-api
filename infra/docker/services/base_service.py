@@ -8,9 +8,11 @@ Fornece funcionalidades comuns para gerenciar containers Docker Compose.
 import subprocess
 import time
 import requests
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, List, Dict, Any
+from dotenv import load_dotenv
 
 from rich.console import Console
 
@@ -65,11 +67,49 @@ class BaseDockerService(ABC):
         self.healthcheck = healthcheck
         self.command = command or []
 
+        # Carregar variáveis de ambiente do .env se existir
+        env_file = Path(__file__).parent.parent / ".env"
+        if env_file.exists():
+            load_dotenv(env_file)
+
         # Define caminho do compose file
         if compose_file is None:
             self.compose_file = Path(__file__).parent.parent / "docker-compose.local.yml"
         else:
             self.compose_file = compose_file
+
+    def _expand_env_vars(self, env_list: List[str]) -> List[str]:
+        """
+        Expande variáveis de ambiente no formato ${VAR} ou ${VAR:-default} para seus valores.
+
+        Args:
+            env_list: Lista de strings de ambiente (ex: ["VAR=${VAR_NAME}", "DB=${DB:-mysql}"])
+
+        Returns:
+            Lista com variáveis expandidas (ex: ["VAR=value", "DB=mysql"])
+        """
+        import re
+        
+        expanded = []
+        for env in env_list:
+            if "=" in env:
+                key, value = env.split("=", 1)
+                # Expandir variáveis no formato ${VAR} ou ${VAR:-default}
+                def replace_var(match):
+                    var_expr = match.group(1)
+                    if ":-" in var_expr:
+                        var_name, default = var_expr.split(":-", 1)
+                        return os.environ.get(var_name, default)
+                    else:
+                        return os.environ.get(var_expr, "")
+                
+                expanded_value = re.sub(r'\$\{([^}]+)\}', replace_var, value)
+                # Também expandir $VAR simples
+                expanded_value = os.path.expandvars(expanded_value)
+                expanded.append(f"{key}={expanded_value}")
+            else:
+                expanded.append(env)
+        return expanded
 
     def _verify_http_endpoint(self, url: str, expected_status: int = 200, max_attempts: int = 10, accept_statuses: Optional[List[int]] = None) -> bool:
         """
@@ -182,8 +222,9 @@ class BaseDockerService(ABC):
             for port in self.ports:
                 cmd.extend(["-p", port])
 
-            # Adicionar environment
-            for env in self.environment:
+            # Adicionar environment (expandir variáveis)
+            expanded_env = self._expand_env_vars(self.environment)
+            for env in expanded_env:
                 cmd.extend(["-e", env])
 
             # Adicionar volumes
