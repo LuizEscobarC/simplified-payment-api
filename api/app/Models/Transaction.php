@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Transaction extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'payer_id',
         'payee_id',

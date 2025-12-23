@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('email')->nullable()->change();
             $table->decimal('balance', 15, 2)->default(0);
             $table->enum('type', ['common', 'merchant'])->default('common');
-            $table->index(['type', 'balance']);
+            $table->index(['type', 'balance'], 'users_type_balance_index');
         });
     }
 
@@ -26,8 +26,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
+            $table->dropIndex('users_type_balance_index');
             $table->dropColumn(['cpf_cnpj', 'balance', 'type']);
-            $table->dropIndex(['type', 'balance']);
         });
     }
 };

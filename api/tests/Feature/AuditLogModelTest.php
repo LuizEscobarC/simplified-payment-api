@@ -12,6 +12,8 @@ class AuditLogModelTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected $connection = 'testing';
+
     public function test_audit_log_creation(): void
     {
         $auditLog = AuditLog::factory()->create();

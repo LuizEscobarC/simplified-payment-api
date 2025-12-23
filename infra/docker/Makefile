@@ -71,6 +71,11 @@ pint: ## Run Pint to fix PHP code style
 	@echo "$(BLUE)🎨 Running Pint to fix code style...$(NC)"
 	@docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/pint"
 
+fix-permissions: ## Fix file permissions for host editing
+	@echo "$(BLUE)🔧 Fixing file permissions for host editing...$(NC)"
+	@docker exec -it payment-api chown -R 1000:1000 /var/www/html
+	@echo "$(GREEN)✅ Permissions fixed!$(NC)"
+
 all: ## Prepare everything and start (complete setup with orchestrator)
 	@echo "$(BLUE)🚀 Starting complete infrastructure setup...$(NC)"
 	@cd $(INFRA_DIR) && \

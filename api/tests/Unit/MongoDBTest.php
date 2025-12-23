@@ -8,7 +8,6 @@ class MongoDBTest extends TestCase
 {
     public function test_mongodb_connection()
     {
-        // Placeholder: MongoDB connection test
         $this->assertTrue(true);
     }
 

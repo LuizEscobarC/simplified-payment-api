@@ -11,6 +11,8 @@ class TransactionModelTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected $connection = 'testing';
+
     public function test_transaction_creation(): void
     {
         $transaction = Transaction::factory()->create();

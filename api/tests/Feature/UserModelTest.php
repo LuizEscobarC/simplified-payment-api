@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Tests\TestCase;
 
 class UserModelTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseMigrations;
+
+    protected $connection = 'testing';
 
     public function test_user_creation(): void
     {

@@ -12,6 +12,8 @@ class NotificationModelTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected $connection = 'testing';
+
     public function test_notification_creation(): void
     {
         $notification = Notification::factory()->create();
