@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MoneyCast;
 use App\Enums\TransactionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,7 +22,7 @@ class Transaction extends Model
     ];
 
     protected $casts = [
-        'value' => 'decimal:2',
+        'value' => MoneyCast::class,
         'status' => TransactionStatus::class,
     ];
 
