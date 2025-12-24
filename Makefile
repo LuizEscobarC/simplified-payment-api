@@ -8,8 +8,8 @@ YELLOW := \033[1;33m
 NC := \033[0m # No Color
 
 # Directories
-INFRA_DIR := .
-DOCKER_DIR := infra/docker
+INFRA_DIR := ./infra
+DOCKER_DIR := ./docker
 
 help: ## Show help
 	@echo "$(BLUE)🚀 Infra Docker - Payment API$(NC)"
@@ -60,7 +60,7 @@ clean: ## Clean containers and volumes
 
 test: ## Run PHP tests
 	@echo "$(BLUE)🧪 Running PHP tests...$(NC)"
-	@docker exec -it payment-api sh -c "cd /var/www/html && php artisan test"
+	@docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpunit"
 
 lint: ## Run PHP linters (Pint and PHPStan)
 	@echo "$(BLUE)🔍 Running PHP linters...$(NC)"
