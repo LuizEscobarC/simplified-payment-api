@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TransactionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,7 @@ class Transaction extends Model
 
     protected $casts = [
         'value' => 'decimal:2',
+        'status' => TransactionStatus::class,
     ];
 
     public function payer(): BelongsTo

@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\EventType;
+use App\Enums\TransactionStatus;
+use App\Enums\UserType;
 use App\Jobs\SendNotification;
 use App\Models\Event;
 use App\Models\User;
@@ -41,7 +44,7 @@ class TransferService
         if (! $payer) {
             throw new \Exception('Payer not found');
         }
-        if ($payer->type !== 'common') {
+        if ($payer->type !== UserType::COMMON) {
             throw new \Exception('Only common users can make transfers');
         }
         if ($payer->balance < $data['value']) {
@@ -78,7 +81,7 @@ class TransferService
     private function saveTransferInitiatedEvent(array $data): void
     {
         $event = new Event([
-            'type' => 'TransferInitiated',
+            'type' => EventType::TRANSFER_INITIATED,
             'data' => [
                 'payer_id' => $data['payer'],
                 'payee_id' => $data['payee'],
@@ -110,7 +113,7 @@ class TransferService
                 'payee_id' => $data['payee'],
                 'value' => $data['value'],
                 'correlation_id' => $data['correlation_id'],
-                'status' => 'approved',
+                'status' => TransactionStatus::APPROVED,
             ]);
 
             return $this->repository->save($transaction);
@@ -120,7 +123,7 @@ class TransferService
     private function saveBalanceUpdatedEvent(int $userId, float $oldBalance, float $newBalance, float $change, string $correlationId): void
     {
         $event = new Event([
-            'type' => 'BalanceUpdated',
+            'type' => EventType::BALANCE_UPDATED,
             'data' => [
                 'user_id' => $userId,
                 'old_balance' => $oldBalance,
