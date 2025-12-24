@@ -3,28 +3,28 @@ FROM php:8.3-fpm-alpine
 
 # Install system dependencies
 RUN apk add --no-cache \
-    git \
-    curl \
-    libpng-dev \
-    oniguruma-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    nodejs \
-    npm \
-    supervisor \
-    nginx \
-    mysql-client \
-    redis \
-    python3 \
-    py3-pip \
-    autoconf \
-    gcc \
-    musl-dev \
-    make \
-    && pecl install redis && docker-php-ext-enable redis \
+        git \
+        curl \
+        libpng-dev \
+        oniguruma-dev \
+        libxml2-dev \
+        zip \
+        unzip \
+        nodejs \
+        npm \
+        supervisor \
+        nginx \
+        mysql-client \
+        python3 \
+        py3-pip \
+        openssl-dev \
+        $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
-    && apk del autoconf gcc musl-dev make
+    && apk del $PHPIZE_DEPS
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir --break-system-packages mysql-connector-python redis rich
