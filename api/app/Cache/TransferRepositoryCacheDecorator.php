@@ -2,6 +2,7 @@
 
 namespace App\Cache;
 
+use App\Models\Transaction;
 use App\Repositories\Mysql\TransferRepositoryInterface;
 use Illuminate\Support\Facades\Cache;
 

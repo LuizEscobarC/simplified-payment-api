@@ -122,6 +122,7 @@ return [
             'password' => env('MONGODB_PASSWORD'),
             'options' => [
                 'database' => env('MONGODB_DATABASE', 'laravel'),
+                'authSource' => 'admin',
             ],
         ],
 

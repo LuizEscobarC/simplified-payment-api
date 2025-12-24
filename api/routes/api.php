@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\TransferController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -23,3 +24,5 @@ Route::get('/test', function () {
         'timestamp' => now()->toISOString(),
     ]);
 });
+
+Route::post('/transfer', [TransferController::class, 'transfer']);
