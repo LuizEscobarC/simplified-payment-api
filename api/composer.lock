@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3e61694de4a5e0578b064caf06b74a58",
+    "content-hash": "662d5cfd2ac492545a4846509409b6fb",
     "packages": [
         {
             "name": "brick/math",
@@ -2153,6 +2153,187 @@
                 }
             ],
             "time": "2025-12-07T16:03:21+00:00"
+        },
+        {
+            "name": "mongodb/laravel-mongodb",
+            "version": "4.9.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mongodb/laravel-mongodb.git",
+                "reference": "486ec44d7a796c4333155bda46ea55d451a0e260"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mongodb/laravel-mongodb/zipball/486ec44d7a796c4333155bda46ea55d451a0e260",
+                "reference": "486ec44d7a796c4333155bda46ea55d451a0e260",
+                "shasum": ""
+            },
+            "require": {
+                "composer-runtime-api": "^2.0.0",
+                "ext-mongodb": "^1.21|^2",
+                "illuminate/cache": "^10.36|^11",
+                "illuminate/container": "^10.0|^11",
+                "illuminate/database": "^10.30|^11",
+                "illuminate/events": "^10.0|^11",
+                "illuminate/support": "^10.0|^11",
+                "mongodb/mongodb": "^1.21|^2",
+                "php": "^8.1"
+            },
+            "conflict": {
+                "illuminate/bus": "< 10.37.2"
+            },
+            "replace": {
+                "jenssegers/mongodb": "self.version"
+            },
+            "require-dev": {
+                "doctrine/coding-standard": "12.0.x-dev",
+                "league/flysystem-gridfs": "^3.28",
+                "league/flysystem-read-only": "^3.0",
+                "mockery/mockery": "^1.4.4",
+                "mongodb/builder": "^0.2",
+                "orchestra/testbench": "^8.0|^9.0",
+                "phpstan/phpstan": "^1.10",
+                "phpunit/phpunit": "^10.3",
+                "spatie/laravel-query-builder": "^5.6"
+            },
+            "suggest": {
+                "league/flysystem-gridfs": "Filesystem storage in MongoDB with GridFS",
+                "mongodb/builder": "Provides a fluent aggregation builder for MongoDB pipelines"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "MongoDB\\Laravel\\MongoDBServiceProvider",
+                        "MongoDB\\Laravel\\MongoDBQueueServiceProvider",
+                        "MongoDB\\Laravel\\MongoDBBusServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "MongoDB\\Laravel\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andreas Braun",
+                    "email": "andreas.braun@mongodb.com",
+                    "role": "Leader"
+                },
+                {
+                    "name": "Jérôme Tamarelle",
+                    "email": "jerome.tamarelle@mongodb.com",
+                    "role": "Maintainer"
+                },
+                {
+                    "name": "Jeremy Mikola",
+                    "email": "jmikola@gmail.com",
+                    "role": "Maintainer"
+                },
+                {
+                    "name": "Jens Segers",
+                    "homepage": "https://jenssegers.com",
+                    "role": "Creator"
+                }
+            ],
+            "description": "A MongoDB based Eloquent model and Query builder for Laravel",
+            "homepage": "https://github.com/mongodb/laravel-mongodb",
+            "keywords": [
+                "database",
+                "eloquent",
+                "laravel",
+                "model",
+                "mongo",
+                "mongodb"
+            ],
+            "support": {
+                "issues": "https://www.mongodb.com/support",
+                "security": "https://www.mongodb.com/security",
+                "source": "https://github.com/mongodb/laravel-mongodb/tree/4.9.0"
+            },
+            "time": "2025-04-14T12:42:15+00:00"
+        },
+        {
+            "name": "mongodb/mongodb",
+            "version": "2.1.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mongodb/mongo-php-library.git",
+                "reference": "0a2472ba9cbb932f7e43a8770aedb2fc30612a67"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mongodb/mongo-php-library/zipball/0a2472ba9cbb932f7e43a8770aedb2fc30612a67",
+                "reference": "0a2472ba9cbb932f7e43a8770aedb2fc30612a67",
+                "shasum": ""
+            },
+            "require": {
+                "composer-runtime-api": "^2.0",
+                "ext-mongodb": "^2.1",
+                "php": "^8.1",
+                "psr/log": "^1.1.4|^2|^3",
+                "symfony/polyfill-php85": "^1.32"
+            },
+            "replace": {
+                "mongodb/builder": "*"
+            },
+            "require-dev": {
+                "doctrine/coding-standard": "^12.0",
+                "phpunit/phpunit": "^10.5.35",
+                "rector/rector": "^2.1.4",
+                "squizlabs/php_codesniffer": "^3.7",
+                "vimeo/psalm": "6.5.*"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.x-dev"
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/functions.php"
+                ],
+                "psr-4": {
+                    "MongoDB\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Andreas Braun",
+                    "email": "andreas.braun@mongodb.com"
+                },
+                {
+                    "name": "Jeremy Mikola",
+                    "email": "jmikola@gmail.com"
+                },
+                {
+                    "name": "Jérôme Tamarelle",
+                    "email": "jerome.tamarelle@mongodb.com"
+                }
+            ],
+            "description": "MongoDB driver library",
+            "homepage": "https://jira.mongodb.org/browse/PHPLIB",
+            "keywords": [
+                "database",
+                "driver",
+                "mongodb",
+                "persistence"
+            ],
+            "support": {
+                "issues": "https://github.com/mongodb/mongo-php-library/issues",
+                "source": "https://github.com/mongodb/mongo-php-library/tree/2.1.2"
+            },
+            "time": "2025-10-06T12:12:40+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -6125,77 +6306,6 @@
             "time": "2024-11-21T13:46:39+00:00"
         },
         {
-            "name": "filp/whoops",
-            "version": "2.18.4",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/filp/whoops.git",
-                "reference": "d2102955e48b9fd9ab24280a7ad12ed552752c4d"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/filp/whoops/zipball/d2102955e48b9fd9ab24280a7ad12ed552752c4d",
-                "reference": "d2102955e48b9fd9ab24280a7ad12ed552752c4d",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^7.1 || ^8.0",
-                "psr/log": "^1.0.1 || ^2.0 || ^3.0"
-            },
-            "require-dev": {
-                "mockery/mockery": "^1.0",
-                "phpunit/phpunit": "^7.5.20 || ^8.5.8 || ^9.3.3",
-                "symfony/var-dumper": "^4.0 || ^5.0"
-            },
-            "suggest": {
-                "symfony/var-dumper": "Pretty print complex values better with var-dumper available",
-                "whoops/soap": "Formats errors as SOAP responses"
-            },
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "2.7-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Whoops\\": "src/Whoops/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Filipe Dobreira",
-                    "homepage": "https://github.com/filp",
-                    "role": "Developer"
-                }
-            ],
-            "description": "php error handling for cool kids",
-            "homepage": "https://filp.github.io/whoops/",
-            "keywords": [
-                "error",
-                "exception",
-                "handling",
-                "library",
-                "throwable",
-                "whoops"
-            ],
-            "support": {
-                "issues": "https://github.com/filp/whoops/issues",
-                "source": "https://github.com/filp/whoops/tree/2.18.4"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/denis-sokolov",
-                    "type": "github"
-                }
-            ],
-            "time": "2025-08-08T12:00:00+00:00"
-        },
-        {
             "name": "hamcrest/hamcrest-php",
             "version": "v2.1.1",
             "source": {
@@ -6245,85 +6355,6 @@
                 "source": "https://github.com/hamcrest/hamcrest-php/tree/v2.1.1"
             },
             "time": "2025-04-30T06:54:44+00:00"
-        },
-        {
-            "name": "laravel/pail",
-            "version": "v1.2.4",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/laravel/pail.git",
-                "reference": "49f92285ff5d6fc09816e976a004f8dec6a0ea30"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/laravel/pail/zipball/49f92285ff5d6fc09816e976a004f8dec6a0ea30",
-                "reference": "49f92285ff5d6fc09816e976a004f8dec6a0ea30",
-                "shasum": ""
-            },
-            "require": {
-                "ext-mbstring": "*",
-                "illuminate/console": "^10.24|^11.0|^12.0",
-                "illuminate/contracts": "^10.24|^11.0|^12.0",
-                "illuminate/log": "^10.24|^11.0|^12.0",
-                "illuminate/process": "^10.24|^11.0|^12.0",
-                "illuminate/support": "^10.24|^11.0|^12.0",
-                "nunomaduro/termwind": "^1.15|^2.0",
-                "php": "^8.2",
-                "symfony/console": "^6.0|^7.0"
-            },
-            "require-dev": {
-                "laravel/framework": "^10.24|^11.0|^12.0",
-                "laravel/pint": "^1.13",
-                "orchestra/testbench-core": "^8.13|^9.17|^10.8",
-                "pestphp/pest": "^2.20|^3.0|^4.0",
-                "pestphp/pest-plugin-type-coverage": "^2.3|^3.0|^4.0",
-                "phpstan/phpstan": "^1.12.27",
-                "symfony/var-dumper": "^6.3|^7.0"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Laravel\\Pail\\PailServiceProvider"
-                    ]
-                },
-                "branch-alias": {
-                    "dev-main": "1.x-dev"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Laravel\\Pail\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Taylor Otwell",
-                    "email": "taylor@laravel.com"
-                },
-                {
-                    "name": "Nuno Maduro",
-                    "email": "enunomaduro@gmail.com"
-                }
-            ],
-            "description": "Easily delve into your Laravel application's log files directly from the command line.",
-            "homepage": "https://github.com/laravel/pail",
-            "keywords": [
-                "dev",
-                "laravel",
-                "logs",
-                "php",
-                "tail"
-            ],
-            "support": {
-                "issues": "https://github.com/laravel/pail/issues",
-                "source": "https://github.com/laravel/pail"
-            },
-            "time": "2025-11-20T16:29:35+00:00"
         },
         {
             "name": "laravel/pint",
@@ -6391,69 +6422,6 @@
                 "source": "https://github.com/laravel/pint"
             },
             "time": "2025-11-25T21:15:52+00:00"
-        },
-        {
-            "name": "laravel/sail",
-            "version": "v1.51.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/laravel/sail.git",
-                "reference": "1c74357df034e869250b4365dd445c9f6ba5d068"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/laravel/sail/zipball/1c74357df034e869250b4365dd445c9f6ba5d068",
-                "reference": "1c74357df034e869250b4365dd445c9f6ba5d068",
-                "shasum": ""
-            },
-            "require": {
-                "illuminate/console": "^9.52.16|^10.0|^11.0|^12.0",
-                "illuminate/contracts": "^9.52.16|^10.0|^11.0|^12.0",
-                "illuminate/support": "^9.52.16|^10.0|^11.0|^12.0",
-                "php": "^8.0",
-                "symfony/console": "^6.0|^7.0",
-                "symfony/yaml": "^6.0|^7.0"
-            },
-            "require-dev": {
-                "orchestra/testbench": "^7.0|^8.0|^9.0|^10.0",
-                "phpstan/phpstan": "^2.0"
-            },
-            "bin": [
-                "bin/sail"
-            ],
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Laravel\\Sail\\SailServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Laravel\\Sail\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Taylor Otwell",
-                    "email": "taylor@laravel.com"
-                }
-            ],
-            "description": "Docker files for running a basic Laravel application.",
-            "keywords": [
-                "docker",
-                "laravel"
-            ],
-            "support": {
-                "issues": "https://github.com/laravel/sail/issues",
-                "source": "https://github.com/laravel/sail"
-            },
-            "time": "2025-12-09T13:33:49+00:00"
         },
         {
             "name": "mockery/mockery",
@@ -6597,105 +6565,6 @@
                 }
             ],
             "time": "2025-08-01T08:46:24+00:00"
-        },
-        {
-            "name": "nunomaduro/collision",
-            "version": "v8.8.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/nunomaduro/collision.git",
-                "reference": "1dc9e88d105699d0fee8bb18890f41b274f6b4c4"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/nunomaduro/collision/zipball/1dc9e88d105699d0fee8bb18890f41b274f6b4c4",
-                "reference": "1dc9e88d105699d0fee8bb18890f41b274f6b4c4",
-                "shasum": ""
-            },
-            "require": {
-                "filp/whoops": "^2.18.1",
-                "nunomaduro/termwind": "^2.3.1",
-                "php": "^8.2.0",
-                "symfony/console": "^7.3.0"
-            },
-            "conflict": {
-                "laravel/framework": "<11.44.2 || >=13.0.0",
-                "phpunit/phpunit": "<11.5.15 || >=13.0.0"
-            },
-            "require-dev": {
-                "brianium/paratest": "^7.8.3",
-                "larastan/larastan": "^3.4.2",
-                "laravel/framework": "^11.44.2 || ^12.18",
-                "laravel/pint": "^1.22.1",
-                "laravel/sail": "^1.43.1",
-                "laravel/sanctum": "^4.1.1",
-                "laravel/tinker": "^2.10.1",
-                "orchestra/testbench-core": "^9.12.0 || ^10.4",
-                "pestphp/pest": "^3.8.2 || ^4.0.0",
-                "sebastian/environment": "^7.2.1 || ^8.0"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider"
-                    ]
-                },
-                "branch-alias": {
-                    "dev-8.x": "8.x-dev"
-                }
-            },
-            "autoload": {
-                "files": [
-                    "./src/Adapters/Phpunit/Autoload.php"
-                ],
-                "psr-4": {
-                    "NunoMaduro\\Collision\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Nuno Maduro",
-                    "email": "enunomaduro@gmail.com"
-                }
-            ],
-            "description": "Cli error handling for console/command-line PHP applications.",
-            "keywords": [
-                "artisan",
-                "cli",
-                "command-line",
-                "console",
-                "dev",
-                "error",
-                "handling",
-                "laravel",
-                "laravel-zero",
-                "php",
-                "symfony"
-            ],
-            "support": {
-                "issues": "https://github.com/nunomaduro/collision/issues",
-                "source": "https://github.com/nunomaduro/collision"
-            },
-            "funding": [
-                {
-                    "url": "https://www.paypal.com/paypalme/enunomaduro",
-                    "type": "custom"
-                },
-                {
-                    "url": "https://github.com/nunomaduro",
-                    "type": "github"
-                },
-                {
-                    "url": "https://www.patreon.com/nunomaduro",
-                    "type": "patreon"
-                }
-            ],
-            "time": "2025-11-20T02:55:25+00:00"
         },
         {
             "name": "phar-io/manifest",
@@ -8349,82 +8218,6 @@
                 }
             ],
             "time": "2024-10-20T05:08:20+00:00"
-        },
-        {
-            "name": "symfony/yaml",
-            "version": "v7.4.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/symfony/yaml.git",
-                "reference": "24dd4de28d2e3988b311751ac49e684d783e2345"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/symfony/yaml/zipball/24dd4de28d2e3988b311751ac49e684d783e2345",
-                "reference": "24dd4de28d2e3988b311751ac49e684d783e2345",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=8.2",
-                "symfony/deprecation-contracts": "^2.5|^3",
-                "symfony/polyfill-ctype": "^1.8"
-            },
-            "conflict": {
-                "symfony/console": "<6.4"
-            },
-            "require-dev": {
-                "symfony/console": "^6.4|^7.0|^8.0"
-            },
-            "bin": [
-                "Resources/bin/yaml-lint"
-            ],
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Symfony\\Component\\Yaml\\": ""
-                },
-                "exclude-from-classmap": [
-                    "/Tests/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Fabien Potencier",
-                    "email": "fabien@symfony.com"
-                },
-                {
-                    "name": "Symfony Community",
-                    "homepage": "https://symfony.com/contributors"
-                }
-            ],
-            "description": "Loads and dumps YAML files",
-            "homepage": "https://symfony.com",
-            "support": {
-                "source": "https://github.com/symfony/yaml/tree/v7.4.1"
-            },
-            "funding": [
-                {
-                    "url": "https://symfony.com/sponsor",
-                    "type": "custom"
-                },
-                {
-                    "url": "https://github.com/fabpot",
-                    "type": "github"
-                },
-                {
-                    "url": "https://github.com/nicolas-grekas",
-                    "type": "github"
-                },
-                {
-                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
-                    "type": "tidelift"
-                }
-            ],
-            "time": "2025-12-04T18:11:45+00:00"
         },
         {
             "name": "theseer/tokenizer",
