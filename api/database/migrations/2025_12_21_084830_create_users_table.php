@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->string('cpf_cnpj', 14)->nullable()->unique();
             $table->string('email')->nullable()->change();
-            $table->decimal('balance', 15, 2)->default(0);
+            $table->bigInteger('balance')->default(0);
             $table->enum('type', ['common', 'merchant'])->default('common');
             $table->index(['type', 'balance'], 'users_type_balance_index');
         });

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('payer_id')->constrained('users');
             $table->foreignId('payee_id')->constrained('users');
-            $table->decimal('value', 15, 2);
+            $table->bigInteger('value');
             $table->enum('status', ['pending', 'approved', 'rejected', 'failed'])->default('pending');
             $table->string('correlation_id', 36)->unique();
             $table->timestamps();
