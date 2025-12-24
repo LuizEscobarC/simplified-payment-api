@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repositories\Mongo;
+namespace App\Repositories\Interfaces;
 
 use App\Models\Event;
 

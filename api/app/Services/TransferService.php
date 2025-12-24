@@ -8,8 +8,8 @@ use App\Enums\UserType;
 use App\Jobs\SendNotification;
 use App\Models\Event;
 use App\Models\User;
-use App\Repositories\Mongo\EventRepositoryInterface;
-use App\Repositories\Mysql\TransferRepositoryInterface;
+use App\Repositories\Interfaces\EventRepositoryInterface;
+use App\Repositories\Interfaces\TransferRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 
 class TransferService

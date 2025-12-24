@@ -3,7 +3,7 @@
 namespace App\Cache;
 
 use App\Models\Transaction;
-use App\Repositories\Mysql\TransferRepositoryInterface;
+use App\Repositories\Interfaces\TransferRepositoryInterface;
 use Illuminate\Support\Facades\Cache;
 
 class TransferRepositoryCacheDecorator implements TransferRepositoryInterface

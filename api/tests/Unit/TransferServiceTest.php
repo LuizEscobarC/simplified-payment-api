@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Repositories\Mongo\EventRepositoryInterface;
-use App\Repositories\Mysql\TransferRepositoryInterface;
+use App\Repositories\Interfaces\EventRepositoryInterface;
+use App\Repositories\Interfaces\TransferRepositoryInterface;
 use App\Services\TransferService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

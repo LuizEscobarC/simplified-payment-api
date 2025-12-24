@@ -3,6 +3,7 @@
 namespace App\Repositories\Mysql;
 
 use App\Models\Transaction;
+use App\Repositories\Interfaces\TransferRepositoryInterface;
 
 class EloquentTransferRepository implements TransferRepositoryInterface
 {
