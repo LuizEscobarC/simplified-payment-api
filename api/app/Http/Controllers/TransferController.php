@@ -26,7 +26,7 @@ class TransferController extends Controller
             return response()->json(['message' => 'Transfer successful', 'data' => $result], 200);
         } catch (\Exception $e) {
             // Log the error
-            Log::error('Transfer failed: ' . $e->getMessage());
+            Log::error('Transfer failed: '.$e->getMessage());
 
             // Return 422 for business logic errors, 500 for system errors
             $status = in_array($e->getMessage(), [
@@ -35,7 +35,7 @@ class TransferController extends Controller
                 'Insufficient balance',
                 'Payer not found',
                 'Payee not found',
-                'Only common users can make transfers'
+                'Only common users can make transfers',
             ]) ? 422 : 500;
 
             return response()->json(['message' => $e->getMessage()], $status);

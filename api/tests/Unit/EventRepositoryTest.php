@@ -5,8 +5,8 @@ namespace Tests\Unit;
 use App\Enums\EventType;
 use App\Models\Event;
 use App\Repositories\Mongo\MongoEventRepository;
-use Tests\TestCase;
 use Mockery;
+use Tests\TestCase;
 
 class EventRepositoryTest extends TestCase
 {
@@ -21,14 +21,14 @@ class EventRepositoryTest extends TestCase
         $event = Mockery::mock(Event::class);
         $event->shouldReceive('save')->andReturn(true);
         $event->shouldReceive('getAttribute')
-              ->with('correlation_id')
-              ->andReturn('test-123');
+            ->with('correlation_id')
+            ->andReturn('test-123');
         $event->shouldReceive('getAttribute')
-              ->with('type')
-              ->andReturn(EventType::TRANSFER_INITIATED);
+            ->with('type')
+            ->andReturn(EventType::TRANSFER_INITIATED);
         $event->shouldReceive('setAttribute')->andReturnSelf();
 
-        $repository = new MongoEventRepository();
+        $repository = new MongoEventRepository;
 
         $saved = $repository->save($event);
 

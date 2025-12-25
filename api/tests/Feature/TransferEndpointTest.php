@@ -21,7 +21,6 @@ class TransferEndpointTest extends TestCase
         parent::setUp();
     }
 
-
     protected function tearDown(): void
     {
         Mockery::close();
@@ -34,7 +33,7 @@ class TransferEndpointTest extends TestCase
 
         // Mock the repositories using Mockery
         $eventRepoMock = Mockery::mock(EventRepositoryInterface::class);
-        $eventRepoMock->shouldReceive('save')->andReturn(new Event());
+        $eventRepoMock->shouldReceive('save')->andReturn(new Event);
         $this->app->instance(EventRepositoryInterface::class, $eventRepoMock);
 
         $transferRepoMock = Mockery::mock(TransferRepositoryInterface::class);
@@ -71,7 +70,7 @@ class TransferEndpointTest extends TestCase
     {
         // Mock the repositories using Mockery
         $eventRepoMock = Mockery::mock(EventRepositoryInterface::class);
-        $eventRepoMock->shouldReceive('save')->andReturn(new Event());
+        $eventRepoMock->shouldReceive('save')->andReturn(new Event);
         $this->app->instance(EventRepositoryInterface::class, $eventRepoMock);
 
         $transferRepoMock = Mockery::mock(TransferRepositoryInterface::class);

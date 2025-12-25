@@ -45,6 +45,7 @@ class TransferServiceTest extends TestCase
                 if ($id == $payee->id) {
                     return $payee;
                 }
+
                 return null;
             });
 
@@ -74,7 +75,7 @@ class TransferServiceTest extends TestCase
             'value' => 50.0,
             'payer' => $payer->id,
             'payee' => $payee->id,
-            'correlation_id' => 'correlation-123'
+            'correlation_id' => 'correlation-123',
         ]);
 
         $this->assertInstanceOf(Transaction::class, $result);

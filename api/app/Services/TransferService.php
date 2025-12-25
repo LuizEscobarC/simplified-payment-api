@@ -15,10 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class TransferService
 {
-
-    public function __construct(private TransferRepositoryInterface $repository, private EventRepositoryInterface $eventRepository, private UserRepositoryInterface $userRepository)
-    {
-    }
+    public function __construct(private TransferRepositoryInterface $repository, private EventRepositoryInterface $eventRepository, private UserRepositoryInterface $userRepository) {}
 
     public function executeTransfer(array $data)
     {
