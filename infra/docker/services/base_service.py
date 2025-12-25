@@ -350,15 +350,3 @@ class BaseDockerService(ABC):
                 console.print(f"❌ Erro ao exibir logs: {result.stderr}", style="red")
         except Exception as e:
             console.print(f"❌ Erro ao exibir logs: {e}", style="red")
-
-    def restart(self) -> bool:
-        """
-        Reinicia serviço.
-
-        Returns:
-            True se reiniciou com sucesso
-        """
-        if self.stop():
-            time.sleep(2)
-            return self.start()
-        return False

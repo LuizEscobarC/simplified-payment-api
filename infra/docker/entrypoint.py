@@ -63,7 +63,8 @@ class LaravelEntrypoint:
         return subprocess.run(
             docker_cmd,
             check=True,
-            text=True
+            text=True,
+            capture_output=True
         )
 
     def ensure_environment(self) -> None:
@@ -85,14 +86,34 @@ class LaravelEntrypoint:
         console.print("📦 Instalando Composer dependências...", style="blue")
 
         try:
-            self.docker_exec(
-                ["composer", "install", "--no-dev", "--optimize-autoloader", "--no-scripts"],
-                cwd=self.base_path
-            )
+            # Verificar se é ambiente de desenvolvimento
+            app_env = self._get_app_env()
+            is_dev = app_env in ['local', 'development', 'testing']
+            
+            cmd = ["composer", "install", "--optimize-autoloader", "--no-scripts"]
+            
+            if not is_dev:
+                cmd.append("--no-dev")
+            
+            console.print(f"📋 Ambiente: {app_env}, instalando deps dev: {is_dev}", style="dim")
+            
+            self.docker_exec(cmd, cwd=self.base_path)
             console.print("✅ Composer install concluído", style="green")
         except subprocess.CalledProcessError as e:
             console.print(f"❌ Erro no composer install: {e}", style="red")
             raise
+
+    def _get_app_env(self) -> str:
+        """
+        Obtém o APP_ENV do container.
+        """
+        try:
+            result = self.docker_exec([
+                "sh", "-c", "grep '^APP_ENV=' /var/www/html/.env | cut -d'=' -f2"
+            ], cwd=self.base_path)
+            return result.stdout.strip() if result.stdout else "production"
+        except:
+            return "production"
 
     def npm_install(self) -> None:
         """
