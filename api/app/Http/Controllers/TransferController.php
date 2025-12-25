@@ -25,10 +25,8 @@ class TransferController extends Controller
 
             return response()->json(['message' => 'Transfer successful', 'data' => $result], 200);
         } catch (\Exception $e) {
-            // Log the error
             Log::error('Transfer failed: '.$e->getMessage());
 
-            // Return 422 for business logic errors, 500 for system errors
             $status = in_array($e->getMessage(), [
                 'Transfer not authorized by external service',
                 'Duplicate transfer',

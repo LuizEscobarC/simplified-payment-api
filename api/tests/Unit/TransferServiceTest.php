@@ -8,6 +8,7 @@ use App\Jobs\SendNotification;
 use App\Models\Event;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Policies\TransferPolicy;
 use App\Repositories\Interfaces\EventRepositoryInterface;
 use App\Repositories\Interfaces\TransferRepositoryInterface;
 use App\Repositories\Interfaces\UserRepositoryInterface;
@@ -28,13 +29,13 @@ class TransferServiceTest extends TestCase
 
     public function test_execute_transfer_successful(): void
     {
-        // Create users
         $payer = User::factory()->create(['type' => UserType::COMMON, 'balance' => 100.0]);
         $payee = User::factory()->create(['type' => UserType::MERCHANT, 'balance' => 50.0]);
 
         $repository = $this->createMock(TransferRepositoryInterface::class);
         $eventRepository = $this->createMock(EventRepositoryInterface::class);
         $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $transferPolicy = $this->createMock(TransferPolicy::class);
 
         $userRepository->expects($this->exactly(2))
             ->method('findById')
@@ -49,10 +50,30 @@ class TransferServiceTest extends TestCase
                 return null;
             });
 
-        $repository->expects($this->once())
-            ->method('findByCorrelationId')
+        $transferPolicy->expects($this->once())
+            ->method('canTransfer')
+            ->with($payer, 50.0)
+            ->willReturn(true);
+
+        $transferPolicy->expects($this->once())
+            ->method('canReceive')
+            ->with($payee)
+            ->willReturn(true);
+
+        $transferPolicy->expects($this->once())
+            ->method('isIdempotent')
             ->with('correlation-123')
-            ->willReturn(null);
+            ->willReturn(true);
+
+        $transferPolicy->expects($this->once())
+            ->method('isAuthorized')
+            ->with(['value' => 50.0, 'payer' => $payer->id, 'payee' => $payee->id, 'correlation_id' => 'correlation-123'])
+            ->willReturn(true);
+
+        $transferPolicy->expects($this->once())
+            ->method('isIdempotent')
+            ->with('correlation-123')
+            ->willReturn(true);
 
         $transaction = new Transaction([
             'payer_id' => $payer->id,
@@ -69,7 +90,7 @@ class TransferServiceTest extends TestCase
             ->method('save')
             ->with($this->isInstanceOf(Event::class));
 
-        $service = new TransferService($repository, $eventRepository, $userRepository);
+        $service = new TransferService($repository, $eventRepository, $userRepository, $transferPolicy);
 
         $result = $service->executeTransfer([
             'value' => 50.0,
@@ -81,7 +102,6 @@ class TransferServiceTest extends TestCase
         $this->assertInstanceOf(Transaction::class, $result);
         $this->assertEquals(TransactionStatus::APPROVED, $result->status);
 
-        // Check balances updated
         $payer->refresh();
         $payee->refresh();
         $this->assertEquals(50.0, $payer->balance);
@@ -95,13 +115,14 @@ class TransferServiceTest extends TestCase
         $repository = $this->createMock(TransferRepositoryInterface::class);
         $eventRepository = $this->createMock(EventRepositoryInterface::class);
         $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $transferPolicy = $this->createMock(TransferPolicy::class);
 
         $userRepository->expects($this->once())
             ->method('findById')
             ->with(999)
             ->willReturn(null);
 
-        $service = new TransferService($repository, $eventRepository, $userRepository);
+        $service = new TransferService($repository, $eventRepository, $userRepository, $transferPolicy);
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Payer not found');
@@ -116,6 +137,7 @@ class TransferServiceTest extends TestCase
         $repository = $this->createMock(TransferRepositoryInterface::class);
         $eventRepository = $this->createMock(EventRepositoryInterface::class);
         $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $transferPolicy = $this->createMock(TransferPolicy::class);
 
         $userRepository->expects($this->exactly(2))
             ->method('findById')
@@ -124,7 +146,12 @@ class TransferServiceTest extends TestCase
                 [999, null],
             ]);
 
-        $service = new TransferService($repository, $eventRepository, $userRepository);
+        $transferPolicy->expects($this->once())
+            ->method('canTransfer')
+            ->with($payer, 100.0)
+            ->willReturn(true);
+
+        $service = new TransferService($repository, $eventRepository, $userRepository, $transferPolicy);
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Payee not found');
@@ -140,13 +167,19 @@ class TransferServiceTest extends TestCase
         $repository = $this->createMock(TransferRepositoryInterface::class);
         $eventRepository = $this->createMock(EventRepositoryInterface::class);
         $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $transferPolicy = $this->createMock(TransferPolicy::class);
 
         $userRepository->expects($this->once())
             ->method('findById')
             ->with($payer->id)
             ->willReturn($payer);
 
-        $service = new TransferService($repository, $eventRepository, $userRepository);
+        $transferPolicy->expects($this->once())
+            ->method('canTransfer')
+            ->with($payer, 50.0)
+            ->willReturn(false);
+
+        $service = new TransferService($repository, $eventRepository, $userRepository, $transferPolicy);
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Only common users can make transfers');
@@ -162,13 +195,14 @@ class TransferServiceTest extends TestCase
         $repository = $this->createMock(TransferRepositoryInterface::class);
         $eventRepository = $this->createMock(EventRepositoryInterface::class);
         $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $transferPolicy = $this->createMock(TransferPolicy::class);
 
         $userRepository->expects($this->once())
             ->method('findById')
             ->with($payer->id)
             ->willReturn($payer);
 
-        $service = new TransferService($repository, $eventRepository, $userRepository);
+        $service = new TransferService($repository, $eventRepository, $userRepository, $transferPolicy);
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Insufficient balance');
@@ -184,6 +218,7 @@ class TransferServiceTest extends TestCase
         $repository = $this->createMock(TransferRepositoryInterface::class);
         $eventRepository = $this->createMock(EventRepositoryInterface::class);
         $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $transferPolicy = $this->createMock(TransferPolicy::class);
 
         $userRepository->expects($this->exactly(2))
             ->method('findById')
@@ -192,13 +227,22 @@ class TransferServiceTest extends TestCase
                 [$payee->id, $payee],
             ]);
 
-        $existingTransaction = new Transaction(['correlation_id' => 'correlation-123']);
-        $repository->expects($this->once())
-            ->method('findByCorrelationId')
-            ->with('correlation-123')
-            ->willReturn($existingTransaction);
+        $transferPolicy->expects($this->once())
+            ->method('canTransfer')
+            ->with($payer, 50.0)
+            ->willReturn(true);
 
-        $service = new TransferService($repository, $eventRepository, $userRepository);
+        $transferPolicy->expects($this->once())
+            ->method('canReceive')
+            ->with($payee)
+            ->willReturn(true);
+
+        $transferPolicy->expects($this->once())
+            ->method('isIdempotent')
+            ->with('correlation-123')
+            ->willReturn(false);
+
+        $service = new TransferService($repository, $eventRepository, $userRepository, $transferPolicy);
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Duplicate transfer');
@@ -214,6 +258,7 @@ class TransferServiceTest extends TestCase
         $repository = $this->createMock(TransferRepositoryInterface::class);
         $eventRepository = $this->createMock(EventRepositoryInterface::class);
         $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $transferPolicy = $this->createMock(TransferPolicy::class);
 
         $userRepository->expects($this->exactly(2))
             ->method('findById')
@@ -222,18 +267,27 @@ class TransferServiceTest extends TestCase
                 [$payee->id, $payee],
             ]);
 
-        $repository->expects($this->once())
-            ->method('findByCorrelationId')
-            ->willReturn(null);
+        $transferPolicy->expects($this->once())
+            ->method('canTransfer')
+            ->with($payer, 50.0)
+            ->willReturn(true);
 
-        $service = $this->getMockBuilder(TransferService::class)
-            ->setConstructorArgs([$repository, $eventRepository, $userRepository])
-            ->onlyMethods(['authorizeTransfer'])
-            ->getMock();
+        $transferPolicy->expects($this->once())
+            ->method('canReceive')
+            ->with($payee)
+            ->willReturn(true);
 
-        $service->expects($this->once())
-            ->method('authorizeTransfer')
+        $transferPolicy->expects($this->once())
+            ->method('isIdempotent')
+            ->with('correlation-123')
+            ->willReturn(true);
+
+        $transferPolicy->expects($this->once())
+            ->method('isAuthorized')
+            ->with(['value' => 50.0, 'payer' => $payer->id, 'payee' => $payee->id, 'correlation_id' => 'correlation-123'])
             ->willReturn(false);
+
+        $service = new TransferService($repository, $eventRepository, $userRepository, $transferPolicy);
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Transfer not authorized by external service');

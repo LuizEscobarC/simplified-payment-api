@@ -50,4 +50,29 @@ class User extends Authenticatable
             'type' => UserType::class,
         ];
     }
+
+    public function scopeCommon($query)
+    {
+        return $query->where('type', UserType::COMMON);
+    }
+
+    public function scopeMerchant($query)
+    {
+        return $query->where('type', UserType::MERCHANT);
+    }
+
+    public function hasSufficientBalance(float $amount): bool
+    {
+        return $this->balance >= $amount;
+    }
+
+    public function canTransfer(): bool
+    {
+        return $this->type === UserType::COMMON;
+    }
+
+    public function canReceive(): bool
+    {
+        return $this->type === UserType::MERCHANT;
+    }
 }

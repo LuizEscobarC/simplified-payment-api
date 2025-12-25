@@ -8,6 +8,7 @@ use App\Enums\UserType;
 use App\Jobs\SendNotification;
 use App\Models\Event;
 use App\Models\User;
+use App\Policies\TransferPolicy;
 use App\Repositories\Interfaces\EventRepositoryInterface;
 use App\Repositories\Interfaces\TransferRepositoryInterface;
 use App\Repositories\Interfaces\UserRepositoryInterface;
@@ -15,7 +16,12 @@ use Illuminate\Support\Facades\DB;
 
 class TransferService
 {
-    public function __construct(private TransferRepositoryInterface $repository, private EventRepositoryInterface $eventRepository, private UserRepositoryInterface $userRepository) {}
+    public function __construct(
+        private TransferRepositoryInterface $repository,
+        private EventRepositoryInterface $eventRepository,
+        private UserRepositoryInterface $userRepository,
+        private TransferPolicy $transferPolicy
+    ) {}
 
     public function executeTransfer(array $data)
     {
@@ -37,11 +43,13 @@ class TransferService
         if (! $payer) {
             throw new \Exception('Payer not found');
         }
-        if ($payer->type !== UserType::COMMON) {
-            throw new \Exception('Only common users can make transfers');
-        }
-        if ($payer->balance < $data['value']) {
-            throw new \Exception('Insufficient balance');
+        if (! $this->transferPolicy->canTransfer($payer, $data['value'])) {
+            if ($payer->type !== UserType::COMMON) {
+                throw new \Exception('Only common users can make transfers');
+            }
+            if (! $payer->hasSufficientBalance($data['value'])) {
+                throw new \Exception('Insufficient balance');
+            }
         }
 
         return $payer;
@@ -53,20 +61,23 @@ class TransferService
         if (! $payee) {
             throw new \Exception('Payee not found');
         }
+        if (! $this->transferPolicy->canReceive($payee)) {
+            throw new \Exception('Payee cannot receive transfers');
+        }
 
         return $payee;
     }
 
     private function checkIdempotency(array $data): void
     {
-        if ($this->repository->findByCorrelationId($data['correlation_id'])) {
+        if (! $this->transferPolicy->isIdempotent($data['correlation_id'])) {
             throw new \Exception('Duplicate transfer');
         }
     }
 
     private function authorizeTransferOrFail(array $data): void
     {
-        if (! $this->authorizeTransfer($data)) {
+        if (! $this->transferPolicy->isAuthorized($data)) {
             throw new \Exception('Transfer not authorized by external service');
         }
     }
@@ -135,11 +146,5 @@ class TransferService
             'transaction_id' => $transaction->id,
             'message' => 'Transfer completed successfully',
         ]);
-    }
-
-    protected function authorizeTransfer(array $data): bool
-    {
-        // Mock implementation - in real app, call external service
-        return true;
     }
 }

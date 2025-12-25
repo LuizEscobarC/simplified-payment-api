@@ -45,4 +45,9 @@ class Transaction extends Model
     {
         return $this->hasMany(AuditLog::class);
     }
+
+    public function scopeByCorrelationId($query, string $correlationId)
+    {
+        return $query->where('correlation_id', $correlationId);
+    }
 }
