@@ -11,11 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->string('password');
             $table->string('cpf_cnpj', 14)->nullable()->unique();
-            $table->string('email')->nullable()->change();
             $table->bigInteger('balance')->default(0);
             $table->enum('type', ['common', 'merchant'])->default('common');
+            $table->rememberToken();
+            $table->timestamps();
+
             $table->index(['type', 'balance'], 'users_type_balance_index');
         });
     }
@@ -25,9 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex('users_type_balance_index');
-            $table->dropColumn(['cpf_cnpj', 'balance', 'type']);
-        });
+        Schema::dropIfExists('users');
     }
 };

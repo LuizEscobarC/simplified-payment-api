@@ -6,11 +6,12 @@ entity User {
   * id : BIGINT AUTO_INCREMENT
   --
   name : VARCHAR(255) NOT NULL
-  cpf_cnpj : VARCHAR(20) UNIQUE NOT NULL
+  cpf_cnpj : VARCHAR(14) NULL UNIQUE
   email : VARCHAR(255) UNIQUE NOT NULL
   password : VARCHAR(255) NOT NULL
-  type : ENUM('user', 'shopkeeper') NOT NULL
-  balance : DECIMAL(15,2) DEFAULT 0.00
+  type : ENUM('common', 'merchant') NOT NULL DEFAULT 'common'
+  balance : BIGINT DEFAULT 0
+  remember_token : VARCHAR(100) NULL
   created_at : TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   updated_at : TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 }
@@ -20,9 +21,9 @@ entity Transaction {
   --
   payer_id : BIGINT NOT NULL
   payee_id : BIGINT NOT NULL
-  value : DECIMAL(15,2) NOT NULL
+  value : BIGINT NOT NULL
   status : ENUM('pending', 'approved', 'rejected', 'failed') DEFAULT 'pending'
-  correlation_id : VARCHAR(255) UNIQUE ' Para idempotência
+  correlation_id : VARCHAR(36) UNIQUE
   created_at : TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   updated_at : TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 }
@@ -34,9 +35,10 @@ entity Notification {
   user_id : BIGINT NOT NULL
   type : ENUM('email', 'sms') NOT NULL
   status : ENUM('queued', 'sent', 'failed') DEFAULT 'queued'
-  message : TEXT
+  message : TEXT NULL
   sent_at : TIMESTAMP NULL
   created_at : TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 }
 
 entity AuditLog {
@@ -45,46 +47,39 @@ entity AuditLog {
   user_id : BIGINT NULL
   transaction_id : BIGINT NULL
   action : VARCHAR(255) NOT NULL
-  details : JSON
-  ip_address : VARCHAR(45)
-  user_agent : TEXT
-  timestamp : TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  details : JSON NULL
+  ip_address : VARCHAR(45) NULL
+  user_agent : TEXT NULL
+  timestamp : TIMESTAMP NOT NULL
+  created_at : TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 }
 
-entity TransferEvent {
+entity Event {
   * _id : ObjectId
   --
-  transfer_id : String (correlation_id)
-  event_type : String (e.g., 'TransferInitiated')
-  user_id : BIGINT
-  event_data : JSON
+  type : String
+  data : JSON
+  correlation_id : String
   timestamp : TIMESTAMP
 }
 
-entity NotificationLog {
-  * _id : ObjectId
-  --
-  transfer_id : String
-  user_id : BIGINT
-  type : String (email/sms)
-  status : String (sent/failed)
-  response : JSON
-  attempts : INT
-  timestamp : TIMESTAMP
-}
+' Relacionamentos
+User ||--o{ Transaction : "payer"
+User ||--o{ Transaction : "payee"
+User ||--o{ Notification
+User ||--o{ AuditLog
+Transaction ||--o{ Notification
+Transaction ||--o{ AuditLog
+Transaction ||--o{ Event : "generates"
 
-' Relacionamentos MongoDB (não relacionais, mas indicativos)
-Transaction ||--o{ TransferEvent : "generates"
-Transaction ||--o{ NotificationLog : "logs notifications"
+note right of Event : MongoDB Collection: events\nAppend-only, immutable events for event sourcing
 
-note right of TransferEvent : MongoDB Collection: transfer_events\nAppend-only, TTL 1 year
-note right of NotificationLog : MongoDB Collection: notification_logs\nAppend-only, TTL 30 days
-
-' Índices sugeridos (não visuais, mas anotados)
-note right of User : Índices: cpf_cnpj, email, type
-note right of Transaction : Índices: payer_id, payee_id, status, correlation_id
-note right of Notification : Índices: transaction_id, user_id, status
-note right of AuditLog : Índices: user_id, transaction_id, action, timestamp
-note right of TransferEvent : Índices: transfer_id, event_type, user_id, timestamp
+' Índices sugeridos
+note right of User : Índices: cpf_cnpj, email, (type, balance)
+note right of Transaction : Índices: payer_id, payee_id, (status, created_at), correlation_id
+note right of Notification : Índices: (transaction_id, user_id, status)
+note right of AuditLog : Índices: (user_id, action, timestamp), (transaction_id, timestamp)
+note right of Event : Índices: correlation_id, type, timestamp
 
 @enduml
