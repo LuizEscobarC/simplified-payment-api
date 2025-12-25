@@ -31,7 +31,8 @@ class ElasticsearchService(BaseDockerService):
                 "interval": "30s",
                 "timeout": "10s",
                 "retries": 3
-            }
+            },
+            compose_file=Path(__file__).parent.parent / "docker-compose.monitoring.yml"
         )
 
     def verify(self, max_attempts: int = 10) -> bool:
@@ -41,6 +42,67 @@ class ElasticsearchService(BaseDockerService):
             expected_status=200,
             max_attempts=max_attempts
         )
+
+    def start(self, wait: bool = True) -> bool:
+        """
+        Inicia serviço via Docker Compose.
+
+        Args:
+            wait: Aguardar serviço ficar pronto
+
+        Returns:
+            True se iniciou com sucesso
+        """
+        from pathlib import Path
+        from rich.console import Console
+
+        console = Console()
+        console.print(f"🚀 Iniciando {self.name} via Docker Compose...", style="blue")
+
+        try:
+            # Usar docker-compose para iniciar o serviço
+            result = self.run_compose_command(["up", "-d", "elasticsearch"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao iniciar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} iniciado!", style="green")
+
+            if wait:
+                return self.verify()
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao iniciar {self.name}: {e}", style="red")
+            return False
+
+    def stop(self) -> bool:
+        """
+        Para serviço via Docker Compose.
+
+        Returns:
+            True se parou com sucesso
+        """
+        from pathlib import Path
+        from rich.console import Console
+
+        console = Console()
+        console.print(f"🛑 Parando {self.name}...", style="yellow")
+
+        try:
+            result = self.run_compose_command(["down"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao parar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} parado!", style="green")
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao parar {self.name}: {e}", style="red")
+            return False
 
 
 class LogstashService(BaseDockerService):
@@ -57,7 +119,8 @@ class LogstashService(BaseDockerService):
                 "./monitoring/logstash.conf:/usr/share/logstash/pipeline/logstash.conf",
                 "./monitoring/logstash.yml:/usr/share/logstash/config/logstash.yml"
             ],
-            networks=["payment-api-main"]
+            networks=["payment-api-main"],
+            compose_file=Path(__file__).parent.parent / "docker-compose.monitoring.yml"
         )
 
     def verify(self, max_attempts: int = 10) -> bool:
@@ -67,6 +130,67 @@ class LogstashService(BaseDockerService):
             expected_status=200,
             max_attempts=max_attempts
         )
+
+    def start(self, wait: bool = True) -> bool:
+        """
+        Inicia serviço via Docker Compose.
+
+        Args:
+            wait: Aguardar serviço ficar pronto
+
+        Returns:
+            True se iniciou com sucesso
+        """
+        from pathlib import Path
+        from rich.console import Console
+
+        console = Console()
+        console.print(f"🚀 Iniciando {self.name} via Docker Compose...", style="blue")
+
+        try:
+            # Usar docker-compose para iniciar o serviço
+            result = self.run_compose_command(["up", "-d", "logstash"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao iniciar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} iniciado!", style="green")
+
+            if wait:
+                return self.verify()
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao iniciar {self.name}: {e}", style="red")
+            return False
+
+    def stop(self) -> bool:
+        """
+        Para serviço via Docker Compose.
+
+        Returns:
+            True se parou com sucesso
+        """
+        from pathlib import Path
+        from rich.console import Console
+
+        console = Console()
+        console.print(f"🛑 Parando {self.name}...", style="yellow")
+
+        try:
+            result = self.run_compose_command(["down"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao parar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} parado!", style="green")
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao parar {self.name}: {e}", style="red")
+            return False
 
 
 class KibanaService(BaseDockerService):
@@ -86,7 +210,8 @@ class KibanaService(BaseDockerService):
                 "interval": "30s",
                 "timeout": "10s",
                 "retries": 3
-            }
+            },
+            compose_file=Path(__file__).parent.parent / "docker-compose.monitoring.yml"
         )
 
     def verify(self, max_attempts: int = 10) -> bool:
@@ -97,6 +222,67 @@ class KibanaService(BaseDockerService):
             max_attempts=max_attempts,
             accept_statuses=[200, 503]  # 503 = inicializando, 200 = pronto
         )
+
+    def start(self, wait: bool = True) -> bool:
+        """
+        Inicia serviço via Docker Compose.
+
+        Args:
+            wait: Aguardar serviço ficar pronto
+
+        Returns:
+            True se iniciou com sucesso
+        """
+        from pathlib import Path
+        from rich.console import Console
+
+        console = Console()
+        console.print(f"🚀 Iniciando {self.name} via Docker Compose...", style="blue")
+
+        try:
+            # Usar docker-compose para iniciar o serviço
+            result = self.run_compose_command(["up", "-d", "kibana"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao iniciar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} iniciado!", style="green")
+
+            if wait:
+                return self.verify()
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao iniciar {self.name}: {e}", style="red")
+            return False
+
+    def stop(self) -> bool:
+        """
+        Para serviço via Docker Compose.
+
+        Returns:
+            True se parou com sucesso
+        """
+        from pathlib import Path
+        from rich.console import Console
+
+        console = Console()
+        console.print(f"🛑 Parando {self.name}...", style="yellow")
+
+        try:
+            result = self.run_compose_command(["down"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao parar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} parado!", style="green")
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao parar {self.name}: {e}", style="red")
+            return False
 
 
 class PrometheusService(BaseDockerService):
@@ -121,7 +307,8 @@ class PrometheusService(BaseDockerService):
                 "--storage.tsdb.retention.time=200h",
                 "--web.enable-lifecycle"
             ],
-            networks=["payment-api-main"]
+            networks=["payment-api-main"],
+            compose_file=Path(__file__).parent.parent / "docker-compose.monitoring.yml"
         )
 
     def verify(self, max_attempts: int = 10) -> bool:
@@ -131,3 +318,64 @@ class PrometheusService(BaseDockerService):
             expected_status=200,
             max_attempts=max_attempts
         )
+
+    def start(self, wait: bool = True) -> bool:
+        """
+        Inicia serviço via Docker Compose.
+
+        Args:
+            wait: Aguardar serviço ficar pronto
+
+        Returns:
+            True se iniciou com sucesso
+        """
+        from pathlib import Path
+        from rich.console import Console
+
+        console = Console()
+        console.print(f"🚀 Iniciando {self.name} via Docker Compose...", style="blue")
+
+        try:
+            # Usar docker-compose para iniciar o serviço
+            result = self.run_compose_command(["up", "-d", "prometheus"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao iniciar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} iniciado!", style="green")
+
+            if wait:
+                return self.verify()
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao iniciar {self.name}: {e}", style="red")
+            return False
+
+    def stop(self) -> bool:
+        """
+        Para serviço via Docker Compose.
+
+        Returns:
+            True se parou com sucesso
+        """
+        from pathlib import Path
+        from rich.console import Console
+
+        console = Console()
+        console.print(f"🛑 Parando {self.name}...", style="yellow")
+
+        try:
+            result = self.run_compose_command(["down"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao parar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} parado!", style="green")
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao parar {self.name}: {e}", style="red")
+            return False

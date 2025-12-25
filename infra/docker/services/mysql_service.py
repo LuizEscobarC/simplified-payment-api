@@ -49,7 +49,8 @@ class MySQLService(BaseDockerService):
                 "timeout": "5s",
                 "retries": 3
             },
-            command=["--default-authentication-plugin=mysql_native_password"]
+            command=["--default-authentication-plugin=mysql_native_password"],
+            compose_file=Path(__file__).parent.parent / "docker-compose.databases.yml"
         )
 
     def verify(self, max_attempts: int = 30) -> bool:
@@ -94,6 +95,59 @@ class MySQLService(BaseDockerService):
 
         console.print(f"\n❌ MySQL não ficou pronto no tempo esperado", style="red")
         return False
+
+    def start(self, wait: bool = True) -> bool:
+        """
+        Inicia serviço via Docker Compose.
+
+        Args:
+            wait: Aguardar serviço ficar pronto
+
+        Returns:
+            True se iniciou com sucesso
+        """
+        console.print(f"🚀 Iniciando {self.name} via Docker Compose...", style="blue")
+
+        try:
+            # Usar docker-compose para iniciar o serviço
+            result = self.run_compose_command(["up", "-d", "payment-mysql"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao iniciar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} iniciado!", style="green")
+
+            if wait:
+                return self.verify()
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao iniciar {self.name}: {e}", style="red")
+            return False
+
+    def stop(self) -> bool:
+        """
+        Para serviço via Docker Compose.
+
+        Returns:
+            True se parou com sucesso
+        """
+        console.print(f"🛑 Parando {self.name}...", style="yellow")
+
+        try:
+            result = self.run_compose_command(["down"])
+
+            if result.returncode != 0:
+                console.print(f"❌ Falha ao parar {self.name}: {result.stderr}", style="red")
+                return False
+
+            console.print(f"✅ {self.name} parado!", style="green")
+            return True
+
+        except Exception as e:
+            console.print(f"❌ Erro ao parar {self.name}: {e}", style="red")
+            return False
 
 
 # Exemplo de uso direto

@@ -61,18 +61,7 @@ class QueueService(BaseDockerService):
             console.print(f"🐳 Iniciando {self.name} via docker-compose...", style="blue")
 
             # Comando docker-compose up
-            cmd = [
-                "docker-compose",
-                "-f", str(self.compose_file),
-                "up", "-d", self.service_name
-            ]
-
-            result = subprocess.run(
-                cmd,
-                cwd=self.compose_file.parent,
-                capture_output=True,
-                text=True
-            )
+            result = self.run_compose_command(["up", "-d", self.service_name])
 
             if result.returncode != 0:
                 console.print(f"❌ Erro ao iniciar {self.name}: {result.stderr}", style="red")
@@ -146,20 +135,9 @@ class QueueService(BaseDockerService):
         try:
             console.print(f"🛑 Parando {self.name}...", style="yellow")
 
-            cmd = [
-                "docker-compose",
-                "-f", str(self.compose_file),
-                "down", self.service_name
-            ]
+            cmd = self.run_compose_command(["down", self.service_name])
 
-            result = subprocess.run(
-                cmd,
-                cwd=self.compose_file.parent,
-                capture_output=True,
-                text=True
-            )
-
-            if result.returncode != 0:
+            if cmd.returncode != 0:
                 console.print(f"❌ Erro ao parar {self.name}: {result.stderr}", style="red")
                 return False
 
@@ -169,18 +147,6 @@ class QueueService(BaseDockerService):
         except Exception as e:
             console.print(f"❌ Erro ao parar {self.name}: {e}", style="red")
             return False
-
-    def restart(self) -> bool:
-        """
-        Reinicia o serviço.
-
-        Returns:
-            True se reiniciou com sucesso
-        """
-        if not self.stop():
-            return False
-
-        return self.start()
 
     def logs(self, follow: bool = False, lines: int = 50) -> None:
         """

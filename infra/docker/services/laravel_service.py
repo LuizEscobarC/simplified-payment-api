@@ -75,24 +75,22 @@ class LaravelService(BaseDockerService):
                 return False
 
             # Comando docker-compose up
-            cmd = [
-                "docker-compose",
-                "-f", str(self.compose_file),
-                "up", "-d", self.service_name
-            ]
-
-            result = subprocess.run(
-                cmd,
-                cwd=self.compose_file.parent,
-                capture_output=True,
-                text=True
-            )
+            result = self.run_compose_command(["up", "-d", self.service_name])
 
             if result.returncode != 0:
                 console.print(f"❌ Erro ao iniciar {self.name}: {result.stderr}", style="red")
                 return False
 
             console.print(f"✅ {self.name} iniciado", style="green")
+
+            # Aguardar container estar totalmente pronto antes do entrypoint
+            console.print("⏳ Aguardando container Laravel ficar pronto...", style="cyan")
+            time.sleep(5)  # Aguardar 5 segundos para container inicializar
+            
+            # Verificar se container está respondendo
+            if not self._wait_for_container_ready():
+                console.print(f"❌ Container {self.name} não ficou pronto", style="red")
+                return False
 
             # Executar entrypoint externamente
             if not self._run_entrypoint():
@@ -117,8 +115,8 @@ class LaravelService(BaseDockerService):
         try:
             console.print("🚀 Executando entrypoint Laravel...", style="blue")
 
-            # Aguardar container estar pronto
-            time.sleep(3)
+            # Aguardar um pouco mais para garantir que o container está estável
+            time.sleep(2)
 
             # Executar entrypoint do host
             entrypoint_path = self.compose_file.parent / "entrypoint.py"
@@ -126,6 +124,8 @@ class LaravelService(BaseDockerService):
                 "python3", str(entrypoint_path),
                 "--container", self.container_name
             ]
+
+            console.print(f"📋 Executando: {' '.join(cmd)}", style="dim")
 
             result = subprocess.run(
                 cmd,
@@ -153,24 +153,68 @@ class LaravelService(BaseDockerService):
             True se parou com sucesso
         """
         try:
-            cmd = [
-                "docker-compose",
-                "-f", str(self.compose_file),
-                "down", self.service_name
-            ]
+            result = self.run_compose_command(["down", self.service_name])
 
-            result = subprocess.run(
-                cmd,
-                cwd=self.compose_file.parent,
-                capture_output=True,
-                text=True
-            )
+            if result.returncode != 0:
+                console.print(f"❌ Erro ao parar {self.name}: {result.stderr}", style="red")
+                return False
 
-            return result.returncode == 0
+            console.print(f"✅ {self.name} parado", style="green")
+            return True
 
         except Exception as e:
             console.print(f"❌ Erro ao parar {self.name}: {e}", style="red")
             return False
+
+    def _wait_for_container_ready(self, max_attempts: int = 30) -> bool:
+        """
+        Aguarda container Laravel ficar pronto para receber comandos.
+
+        Args:
+            max_attempts: Máximo de tentativas
+
+        Returns:
+            True se container está pronto
+        """
+        console.print("⏳ Verificando se container está pronto...", style="cyan")
+
+        for attempt in range(max_attempts):
+            try:
+                # Verifica se container está rodando
+                result = subprocess.run(
+                    ["docker", "ps", "--filter", f"name={self.container_name}", "--format", "{{.Status}}"],
+                    capture_output=True,
+                    text=True
+                )
+
+                if "Up" not in result.stdout:
+                    if attempt % 5 == 0:
+                        console.print(".", end="", style="cyan")
+                    time.sleep(2)
+                    continue
+
+                # Verifica se podemos executar comandos no container
+                result = subprocess.run(
+                    ["docker", "exec", self.container_name, "test", "-d", "/var/www/html"],
+                    capture_output=True,
+                    text=True
+                )
+
+                if result.returncode == 0:
+                    console.print("\n✅ Container Laravel pronto!", style="green")
+                    return True
+
+                if attempt % 5 == 0:
+                    console.print(".", end="", style="cyan")
+
+            except Exception:
+                if attempt % 5 == 0:
+                    console.print(".", end="", style="cyan")
+
+            time.sleep(2)
+
+        console.print(f"\n❌ Container Laravel não ficou pronto após {max_attempts * 2}s", style="red")
+        return False
 
     def verify(self, max_attempts: int = 60) -> bool:
         """
