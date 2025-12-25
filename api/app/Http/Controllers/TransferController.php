@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\TransferRequest;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class TransferController extends Controller
 {
@@ -24,7 +25,20 @@ class TransferController extends Controller
 
             return response()->json(['message' => 'Transfer successful', 'data' => $result], 200);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            // Log the error
+            Log::error('Transfer failed: ' . $e->getMessage());
+
+            // Return 422 for business logic errors, 500 for system errors
+            $status = in_array($e->getMessage(), [
+                'Transfer not authorized by external service',
+                'Duplicate transfer',
+                'Insufficient balance',
+                'Payer not found',
+                'Payee not found',
+                'Only common users can make transfers'
+            ]) ? 422 : 500;
+
+            return response()->json(['message' => $e->getMessage()], $status);
         }
     }
 }

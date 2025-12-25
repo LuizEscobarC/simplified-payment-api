@@ -5,8 +5,10 @@ namespace App\Providers;
 use App\Cache\TransferRepositoryCacheDecorator;
 use App\Repositories\Interfaces\EventRepositoryInterface;
 use App\Repositories\Interfaces\TransferRepositoryInterface;
+use App\Repositories\Interfaces\UserRepositoryInterface;
 use App\Repositories\Mongo\MongoEventRepository;
 use App\Repositories\Mysql\EloquentTransferRepository;
+use App\Repositories\Mysql\EloquentUserRepository;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TransferRepositoryInterface::class, function ($app) {
             return new TransferRepositoryCacheDecorator($app->make(EloquentTransferRepository::class));
         });
+
+        $this->app->bind(UserRepositoryInterface::class, EloquentUserRepository::class);
         $this->app->bind(EventRepositoryInterface::class, MongoEventRepository::class);
     }
 

@@ -10,18 +10,14 @@ use App\Models\Event;
 use App\Models\User;
 use App\Repositories\Interfaces\EventRepositoryInterface;
 use App\Repositories\Interfaces\TransferRepositoryInterface;
+use App\Repositories\Interfaces\UserRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 
 class TransferService
 {
-    protected $repository;
 
-    protected $eventRepository;
-
-    public function __construct(TransferRepositoryInterface $repository, EventRepositoryInterface $eventRepository)
+    public function __construct(private TransferRepositoryInterface $repository, private EventRepositoryInterface $eventRepository, private UserRepositoryInterface $userRepository)
     {
-        $this->repository = $repository;
-        $this->eventRepository = $eventRepository;
     }
 
     public function executeTransfer(array $data)
@@ -40,7 +36,7 @@ class TransferService
 
     private function validatePayer(array $data): User
     {
-        $payer = User::find($data['payer']);
+        $payer = $this->userRepository->findById($data['payer']);
         if (! $payer) {
             throw new \Exception('Payer not found');
         }
@@ -56,7 +52,7 @@ class TransferService
 
     private function validatePayee(array $data): User
     {
-        $payee = User::find($data['payee']);
+        $payee = $this->userRepository->findById($data['payee']);
         if (! $payee) {
             throw new \Exception('Payee not found');
         }
