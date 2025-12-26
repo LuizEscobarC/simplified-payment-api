@@ -5,9 +5,12 @@ namespace App\Policies;
 use App\Enums\UserType;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\CircuitBreaker;
 
 class TransferPolicy
 {
+    public function __construct(private CircuitBreaker $circuitBreaker) {}
+
     public function canTransfer(User $user, float $amount): bool
     {
         return $user->type === UserType::COMMON && $user->hasSufficientBalance($amount);
@@ -23,13 +26,8 @@ class TransferPolicy
         return ! Transaction::byCorrelationId($correlationId)->exists();
     }
 
-    /**
-     * TODO: Authorize the transfer with external service.
-     * Mock implementation - in real app, call external service.
-     */
     public function isAuthorized(array $data): bool
     {
-        // Mock implementation
-        return true;
+        return $this->circuitBreaker->authorizeTransfer();
     }
 }

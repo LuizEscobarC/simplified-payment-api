@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Jobs\SendNotification;
 use App\Models\Event;
 use App\Models\User;
+use App\Policies\TransferPolicy;
 use App\Repositories\Interfaces\EventRepositoryInterface;
 use App\Repositories\Interfaces\TransferRepositoryInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\TestCase;
 
@@ -19,6 +21,9 @@ class TransferEndpointTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Http::fake([
+            'util.devi.tools/api/v2/authorize' => Http::response(['data' => ['authorization' => true]], 200),
+        ]);
     }
 
     protected function tearDown(): void
@@ -47,6 +52,13 @@ class TransferEndpointTest extends TestCase
             'status' => 'approved',
         ]));
         $this->app->instance(TransferRepositoryInterface::class, $transferRepoMock);
+
+        $transferPolicyMock = Mockery::mock(TransferPolicy::class);
+        $transferPolicyMock->shouldReceive('canTransfer')->andReturn(true);
+        $transferPolicyMock->shouldReceive('canReceive')->andReturn(true);
+        $transferPolicyMock->shouldReceive('isIdempotent')->andReturn(true);
+        $transferPolicyMock->shouldReceive('isAuthorized')->andReturn(true);
+        $this->app->instance(TransferPolicy::class, $transferPolicyMock);
 
         $payer = User::factory()->create(['type' => 'common', 'balance' => 100.00]);
         $payee = User::factory()->create(['type' => 'merchant', 'balance' => 0.00]);
