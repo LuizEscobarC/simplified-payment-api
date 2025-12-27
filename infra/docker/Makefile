@@ -12,7 +12,7 @@ IS_INSIDE_CONTAINER := $(shell if [ -f /var/www/html/composer.json ]; then echo 
 
 # Directories
 INFRA_DIR := ..
-DOCKER_DIR := .
+DOCKER_DIR := docker
 
 help: ## Show help
 	@echo "$(BLUE)🚀 Infra Docker - Payment API$(NC)"
@@ -35,31 +35,31 @@ setup: ## Prepare Python environment (venv + dependencies)
 
 start: ## Start basic services using orchestrator
 	@echo "$(BLUE)🚀 Starting basic services using orchestrator...$(NC)"
-	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 docker/orchestrator.py start"
+	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py start"
 
 start-force: ## Start services ignoring partial failures
 	@echo "$(BLUE)🚀 Starting services (ignoring partial failures)...$(NC)"
-	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 docker/orchestrator.py start" || echo "$(YELLOW)⚠️  Some services failed but continuing...$(NC)"
+	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py start" || echo "$(YELLOW)⚠️  Some services failed but continuing...$(NC)"
 
 start-monitoring: ## Start services + monitoring
 	@echo "$(BLUE)🚀 Starting services with monitoring...$(NC)"
-	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 docker/orchestrator.py start --monitoring"
+	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py start --monitoring"
 
 hooks: ## Configure Git hooks for quality
 	@echo "$(BLUE)🔧 Configuring Git hooks...$(NC)"
-	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 docker/orchestrator.py hooks"
+	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py hooks"
 
 status: ## Show services status
 	@echo "$(BLUE)📊 Services status...$(NC)"
-	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 docker/orchestrator.py status"
+	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py status"
 
 stop: ## Stop all services
 	@echo "$(YELLOW)🛑 Stopping services...$(NC)"
-	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 docker/orchestrator.py stop"
+	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py stop"
 
 clean: ## Clean containers and volumes
 	@echo "$(YELLOW)🧹 Cleaning containers...$(NC)"
-	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 docker/orchestrator.py cleanup"
+	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py cleanup"
 
 test: ## Run PHP tests
 	@echo "$(BLUE)🧪 Running PHP tests...$(NC)"
@@ -97,6 +97,6 @@ all: ## Prepare everything and start (complete setup with orchestrator)
 	echo "$(BLUE)🔧 Configuring Git hooks...$(NC)" && \
 	bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py hooks" && \
 	echo "$(BLUE)🧪 Running tests to verify setup...$(NC)" && \
-	(cd ../.. && $(MAKE) test) && \
+	docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpunit" && \
 	echo "$(GREEN)🎉 Setup completed successfully! All tests passed.$(NC)" && \
 	echo "$(BLUE)💡 Access: http://localhost$(NC)" || (echo "$(YELLOW)⚠️  Setup completed with issues. Check services and tests.$(NC)" && exit 1)
