@@ -65,7 +65,7 @@ test: ## Run PHP tests
 lint: ## Run PHP linters (Pint and PHPStan)
 	@echo "$(BLUE)🔍 Running PHP linters...$(NC)"
 	@docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/pint --test" && \
-	docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpstan analyse app"
+	docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpstan analyse app --memory-limit=-1"
 
 pint: ## Run Pint to fix PHP code style
 	@echo "$(BLUE)🎨 Running Pint to fix code style...$(NC)"

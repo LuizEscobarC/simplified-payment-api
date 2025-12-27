@@ -60,12 +60,12 @@ clean: ## Clean containers and volumes
 
 test: ## Run PHP tests
 	@echo "$(BLUE)🧪 Running PHP tests...$(NC)"
-	@docker exec -it payment-api sh -c "cd /var/www/html && php artisan test"
+	@docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpunit"
 
 lint: ## Run PHP linters (Pint and PHPStan)
 	@echo "$(BLUE)🔍 Running PHP linters...$(NC)"
 	@docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/pint --test" && \
-	docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpstan analyse app"
+	docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpstan analyse app --memory-limit=-1"
 
 pint: ## Run Pint to fix PHP code style
 	@echo "$(BLUE)🎨 Running Pint to fix code style...$(NC)"
