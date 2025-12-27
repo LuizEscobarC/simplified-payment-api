@@ -66,7 +66,7 @@ A API é RESTful e usa JSON para tudo. Quando rodando localmente, a base é http
 Usa Laravel Sanctum. Faça POST /login com email e senha para pegar o token, depois inclua no header: `Authorization: Bearer {seu_token}` nas requisições que precisam.
 
 ### Endpoints Principais
-- **POST /transfer**: Faz transferência (value, payer_id, payee_id) - só logado, valida saldo e autorização externa
+- **POST /transfer**: Faz transferência (value, payer_id, payee_id) - valida saldo e autorização externa
 - **GET /test**: Teste
 
 Respostas sempre em JSON com códigos HTTP claros (200 OK, 401 Unauthorized, 422 Validation Error, etc.). Use Postman ou curl para testar.
