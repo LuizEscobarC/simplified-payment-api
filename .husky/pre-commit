@@ -3,29 +3,47 @@
 
 echo "🔍 Executando verificações de qualidade de código..."
 
-# Laravel Pint
-echo "🎨 Executando Laravel Pint..."
-cd api
-./vendor/bin/pint --test || {
-    echo "❌ Laravel Pint encontrou problemas. Corrigindo..."
-    ./vendor/bin/pint
-    git add .
+# Function to run command
+run_command() {
+    local cmd="$1"
+    if [ -f /var/www/html/composer.json ]; then
+        eval "$cmd"
+    else
+        if docker ps | grep -q payment-api; then
+            docker exec payment-api sh -c "cd /var/www/html && $cmd"
+        else
+            cd api && eval "$cmd"
+        fi
+    fi
 }
 
-# PHP-CS-Fixer
-echo "🔧 Executando PHP-CS-Fixer..."
-cd ..
-infra/tools/php-cs-fixer fix api/ --dry-run --diff || {
-    echo "❌ PHP-CS-Fixer encontrou problemas. Corrigindo..."
-    infra/tools/php-cs-fixer fix api/
+# Laravel Pint
+echo "🎨 Executando Laravel Pint..."
+run_command "./vendor/bin/pint --test" || {
+    echo "❌ Laravel Pint encontrou problemas. Corrigindo..."
+    run_command "./vendor/bin/pint"
     git add .
 }
 
 # PHPMD
 echo "📊 Executando PHPMD..."
-infra/tools/phpmd api/app text cleancode,codesize,controversial,design,naming,unusedcode || {
-    echo "⚠️ PHPMD encontrou problemas. Revise o código."
-    exit 1
-}
+if [ -f /var/www/html/composer.json ]; then
+    /usr/local/bin/phpmd app xml phpmd.xml || {
+        echo "⚠️ PHPMD encontrou problemas. Revise o código."
+        exit 1
+    }
+else
+    if docker ps | grep -q payment-api; then
+        docker exec payment-api sh -c "cd /var/www/html && /usr/local/bin/phpmd app xml phpmd.xml" || {
+            echo "⚠️ PHPMD encontrou problemas. Revise o código."
+            exit 1
+        }
+    else
+        infra/tools/phpmd api/app xml phpmd.xml || {
+            echo "⚠️ PHPMD encontrou problemas. Revise o código."
+            exit 1
+        }
+    fi
+fi
 
 echo "✅ Verificações de qualidade concluídas!"

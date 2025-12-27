@@ -3,10 +3,23 @@
 
 echo "🔬 Executando análise estática completa..."
 
+# Function to run command
+run_command() {
+    local cmd="$1"
+    if [ -f /var/www/html/composer.json ]; then
+        eval "$cmd"
+    else
+        if docker ps | grep -q payment-api; then
+            docker exec payment-api sh -c "cd /var/www/html && $cmd"
+        else
+            cd api && eval "$cmd"
+        fi
+    fi
+}
+
 # PHPStan
 echo "🔍 Executando PHPStan..."
-cd api
-../infra/tools/phpstan analyse app/ || {
+run_command "./vendor/bin/phpstan analyse app --memory-limit=-1" || {
     echo "❌ PHPStan encontrou erros. Corrija antes de fazer push."
     exit 1
 }

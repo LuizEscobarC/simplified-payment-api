@@ -45,6 +45,11 @@ COPY ./api .
 # Install PHP dependencies
 RUN composer install --optimize-autoloader --no-interaction --ignore-platform-reqs --no-scripts
 
+# Install code quality tools
+RUN composer global require phpmd/phpmd phpstan/phpstan
+RUN ln -s /root/.composer/vendor/bin/phpmd /usr/local/bin/phpmd
+RUN ln -s /root/.composer/vendor/bin/phpstan /usr/local/bin/phpstan
+
 # Install Node.js dependencies and build assets
 RUN npm install && npm run build
 

@@ -2,7 +2,7 @@
 """
 Git Hooks Service.
 
-Configura Git hooks para qualidade de código: PHPStan, Laravel Pint, PHPMD, PHP-CS-Fixer.
+Configura Git hooks para qualidade de código: PHPStan, Laravel Pint, PHPMD.
 """
 
 import os
@@ -70,7 +70,6 @@ class GitHooksService(BaseDockerService):
         console.print("🔍 Verificando configuração dos Git hooks...")
 
         checks = [
-            self._check_tool("php-cs-fixer"),
             self._check_tool("phpmd"),
             self._check_tool("phpstan"),
             self._check_husky_setup(),
@@ -88,7 +87,7 @@ class GitHooksService(BaseDockerService):
         """Mostra status das ferramentas."""
         console.print("📋 Status das ferramentas de qualidade:")
 
-        tools = ["php-cs-fixer", "phpmd", "phpstan"]
+        tools = ["phpmd", "phpstan"]
         for tool in tools:
             if self._check_tool(tool):
                 console.print(f"✅ {tool}: instalado")
@@ -114,12 +113,6 @@ class GitHooksService(BaseDockerService):
     def _install_tools(self) -> None:
         """Instala ferramentas necessárias."""
         console.print("📦 Instalando ferramentas de qualidade...")
-
-        # PHP-CS-Fixer
-        self._download_phar(
-            "https://cs.symfony.com/download/php-cs-fixer-v3.phar",
-            "php-cs-fixer"
-        )
 
         # PHPMD
         self._download_phar(
@@ -197,30 +190,37 @@ class GitHooksService(BaseDockerService):
 
 echo "🔍 Executando verificações de qualidade de código..."
 
-# Laravel Pint
-echo "🎨 Executando Laravel Pint..."
-cd api
-./vendor/bin/pint --test || {
-    echo "❌ Laravel Pint encontrou problemas. Corrigindo..."
-    ./vendor/bin/pint
-    git add .
+# Function to run command in container or locally
+run_command() {
+    local cmd="$1"
+    if docker ps | grep -q payment-api; then
+        docker exec payment-api sh -c "cd /var/www/html && $cmd"
+    else
+        cd api && eval "$cmd"
+    fi
 }
 
-# PHP-CS-Fixer
-echo "🔧 Executando PHP-CS-Fixer..."
-cd ..
-infra/tools/php-cs-fixer fix api/ --dry-run --diff || {
-    echo "❌ PHP-CS-Fixer encontrou problemas. Corrigindo..."
-    infra/tools/php-cs-fixer fix api/
+# Laravel Pint
+echo "🎨 Executando Laravel Pint..."
+run_command "./vendor/bin/pint --test" || {
+    echo "❌ Laravel Pint encontrou problemas. Corrigindo..."
+    run_command "./vendor/bin/pint"
     git add .
 }
 
 # PHPMD
 echo "📊 Executando PHPMD..."
-infra/tools/phpmd api/app text cleancode,codesize,controversial,design,naming,unusedcode || {
-    echo "⚠️ PHPMD encontrou problemas. Revise o código."
-    exit 1
-}
+if docker ps | grep -q payment-api; then
+    docker exec payment-api sh -c "cd /var/www/html && /usr/local/bin/phpmd app text cleancode,codesize,controversial,design,naming,unusedcode" || {
+        echo "⚠️ PHPMD encontrou problemas. Revise o código."
+        exit 1
+    }
+else
+    infra/tools/phpmd api/app text cleancode,codesize,controversial,design,naming,unusedcode || {
+        echo "⚠️ PHPMD encontrou problemas. Revise o código."
+        exit 1
+    }
+fi
 
 echo "✅ Verificações de qualidade concluídas!"
 """
@@ -238,13 +238,29 @@ echo "✅ Verificações de qualidade concluídas!"
 
 echo "🔬 Executando análise estática completa..."
 
+# Function to run command in container or locally
+run_command() {
+    local cmd="$1"
+    if docker ps | grep -q payment-api; then
+        docker exec payment-api sh -c "cd /var/www/html && $cmd"
+    else
+        cd api && eval "$cmd"
+    fi
+}
+
 # PHPStan
 echo "🔍 Executando PHPStan..."
-cd api
-../infra/tools/phpstan analyse app/ || {
-    echo "❌ PHPStan encontrou erros. Corrija antes de fazer push."
-    exit 1
-}
+if docker ps | grep -q payment-api; then
+    docker exec payment-api sh -c "cd /var/www/html && /usr/local/bin/phpstan analyse app --memory-limit=-1" || {
+        echo "❌ PHPStan encontrou erros. Corrija antes de fazer push."
+        exit 1
+    }
+else
+    infra/tools/phpstan analyse api/app --memory-limit=-1 || {
+        echo "❌ PHPStan encontrou erros. Corrija antes de fazer push."
+        exit 1
+    }
+fi
 
 echo "✅ Análise estática concluída!"
 """

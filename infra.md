@@ -26,7 +26,7 @@ O comando `make hooks` ou `make all` configura automaticamente os Git hooks usan
 - **Pre-commit**: Executa Laravel Pint, PHP-CS-Fixer e PHPMD antes de cada commit
 - **Pre-push**: Executa PHPStan antes de cada push
 
-Os hooks rodam dentro dos containers Docker para garantir consistência.
+Os hooks rodam dentro dos containers Docker para garantir consistência. As ferramentas de qualidade (PHPStan, PHPMD, Laravel Pint) são gerenciadas via Composer como dependências de desenvolvimento.
 
 ## Makefile em infra/docker
 
