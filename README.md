@@ -95,7 +95,7 @@ PCI-DSS: Senhas são armazenadas com hash seguro (padrão Laravel com bcrypt), t
 
 O sistema usa Laravel 11 para API robusta e escalável, com PHP 8.3 para performance. Transações atômicas (DB::transaction) garantem integridade financeira, revertendo tudo em falhas. Event sourcing (MongoDB) rastreia mudanças imutáveis para auditoria. Circuit breaker protege contra falhas no autorizador externo, abrindo após 5 erros. Notificações assíncronas via Redis queues evitam bloqueios. Diagramas PlantUML mostram arquitetura clara: Nginx proxy, Laravel app, bancos separados (MySQL para transações, Mongo para eventos, Redis para cache/filas). Testes unitários e feature (52 no total) validam regras, como idempotência e validações. Repositórios e policies seguem SOLID para manutenção. Tudo containerizado com Docker para consistência.
 
-Não deu tempo de aplicar todas as ideias que tenho, mas será uma hora explicar quais seriam os próximos passos (observabilidade, segurança, projections + sharding de banco, balanceamento com ngix, worker para transferencias, fallback para outro autorizador caso o primeiro esteja falhando, ao inves de somente recusar no circuit, entre outros). 
+Não deu tempo de aplicar todas as ideias que tenho, mas será uma hora explicar quais seriam os próximos passos (observabilidade, segurança, projections + sharding de banco, balanceamento com ngix, worker para transferencias, fallback para outro autorizador caso o primeiro esteja falhando, ao inves de somente recusar no circuit, Swoole, entre outros). 
 
 Atenciosamente Luiz :'^) .
 
