@@ -23,9 +23,10 @@ services:
         build:
             context: ../..
             dockerfile: infra/docker/php/Dockerfile.local
+            args:
+                USER_ID: ${USER_ID:-1000}
+                GROUP_ID: ${GROUP_ID:-1000}
         restart: unless-stopped
-        env_file:
-            - .env
         environment:
             DB_CONNECTION: ${DB_CONNECTION}
             DB_HOST: ${DB_HOST}
@@ -47,6 +48,7 @@ services:
                 max-file: "3"
         volumes:
             - ../../api/:/var/www/html
+            - ../../api/.env:/var/www/html/.env
             - ./php/${INI_FILE:-local.ini}:/usr/local/etc/php/conf.d/local.ini
             - ./php/www.conf:/usr/local/etc/php-fpm.d/www.conf
         networks:
@@ -58,6 +60,9 @@ services:
         build:
             context: ../..
             dockerfile: infra/docker/php/Dockerfile.queue
+            args:
+                USER_ID: ${USER_ID:-1000}
+                GROUP_ID: ${GROUP_ID:-1000}
         restart: unless-stopped
         env_file:
             - .env

@@ -21,9 +21,22 @@ RUN apk add --no-cache \
     gcc \
     musl-dev \
     make \
+    shadow \
     && pecl install redis && docker-php-ext-enable redis \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && apk del autoconf gcc musl-dev make
+
+# Create user with host UID/GID to avoid permission issues
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN if [ "$USER_ID" != "0" ]; then \
+        groupmod -n appuser www-data && \
+        usermod -l appuser -d /home/appuser www-data && \
+        usermod -u $USER_ID appuser && \
+        groupmod -g $GROUP_ID appuser && \
+        mkdir -p /home/appuser && \
+        chown appuser:appuser /home/appuser; \
+    fi
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir --break-system-packages mysql-connector-python redis rich
@@ -48,7 +61,13 @@ RUN composer install --optimize-autoloader --no-interaction --ignore-platform-re
 RUN npm install && npm run build
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www/html \
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN if [ "$USER_ID" != "0" ]; then \
+        chown -R appuser:appuser /var/www/html; \
+    else \
+        chown -R www-data:www-data /var/www/html; \
+    fi \
     && chmod -R 755 /var/www/html/storage
 
 # Copy supervisor configuration
