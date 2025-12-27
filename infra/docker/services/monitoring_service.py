@@ -4,6 +4,7 @@ Serviço Elasticsearch para orquestração Docker.
 """
 
 import time
+from pathlib import Path
 from typing import Optional
 
 from .base_service import BaseDockerService
