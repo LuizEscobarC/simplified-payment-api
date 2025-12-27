@@ -190,13 +190,17 @@ class GitHooksService(BaseDockerService):
 
 echo "🔍 Executando verificações de qualidade de código..."
 
-# Function to run command in container or locally
+# Function to run command
 run_command() {
     local cmd="$1"
-    if docker ps | grep -q payment-api; then
-        docker exec payment-api sh -c "cd /var/www/html && $cmd"
+    if [ -f /var/www/html/composer.json ]; then
+        eval "$cmd"
     else
-        cd api && eval "$cmd"
+        if docker ps | grep -q payment-api; then
+            docker exec payment-api sh -c "cd /var/www/html && $cmd"
+        else
+            cd api && eval "$cmd"
+        fi
     fi
 }
 
@@ -210,16 +214,23 @@ run_command "./vendor/bin/pint --test" || {
 
 # PHPMD
 echo "📊 Executando PHPMD..."
-if docker ps | grep -q payment-api; then
-    docker exec payment-api sh -c "cd /var/www/html && /usr/local/bin/phpmd app text cleancode,codesize,controversial,design,naming,unusedcode" || {
+if [ -f /var/www/html/composer.json ]; then
+    /usr/local/bin/phpmd app xml phpmd.xml || {
         echo "⚠️ PHPMD encontrou problemas. Revise o código."
         exit 1
     }
 else
-    infra/tools/phpmd api/app text cleancode,codesize,controversial,design,naming,unusedcode || {
-        echo "⚠️ PHPMD encontrou problemas. Revise o código."
-        exit 1
-    }
+    if docker ps | grep -q payment-api; then
+        docker exec payment-api sh -c "cd /var/www/html && /usr/local/bin/phpmd app xml phpmd.xml" || {
+            echo "⚠️ PHPMD encontrou problemas. Revise o código."
+            exit 1
+        }
+    else
+        infra/tools/phpmd api/app xml phpmd.xml || {
+            echo "⚠️ PHPMD encontrou problemas. Revise o código."
+            exit 1
+        }
+    fi
 fi
 
 echo "✅ Verificações de qualidade concluídas!"
@@ -238,29 +249,26 @@ echo "✅ Verificações de qualidade concluídas!"
 
 echo "🔬 Executando análise estática completa..."
 
-# Function to run command in container or locally
+# Function to run command
 run_command() {
     local cmd="$1"
-    if docker ps | grep -q payment-api; then
-        docker exec payment-api sh -c "cd /var/www/html && $cmd"
+    if [ -f /var/www/html/composer.json ]; then
+        eval "$cmd"
     else
-        cd api && eval "$cmd"
+        if docker ps | grep -q payment-api; then
+            docker exec payment-api sh -c "cd /var/www/html && $cmd"
+        else
+            cd api && eval "$cmd"
+        fi
     fi
 }
 
 # PHPStan
 echo "🔍 Executando PHPStan..."
-if docker ps | grep -q payment-api; then
-    docker exec payment-api sh -c "cd /var/www/html && /usr/local/bin/phpstan analyse app --memory-limit=-1" || {
-        echo "❌ PHPStan encontrou erros. Corrija antes de fazer push."
-        exit 1
-    }
-else
-    infra/tools/phpstan analyse api/app --memory-limit=-1 || {
-        echo "❌ PHPStan encontrou erros. Corrija antes de fazer push."
-        exit 1
-    }
-fi
+run_command "./vendor/bin/phpstan analyse app --memory-limit=-1" || {
+    echo "❌ PHPStan encontrou erros. Corrija antes de fazer push."
+    exit 1
+}
 
 echo "✅ Análise estática concluída!"
 """

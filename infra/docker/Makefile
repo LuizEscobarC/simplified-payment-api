@@ -90,9 +90,13 @@ all: ## Prepare everything and start (complete setup with orchestrator)
 	echo "🔧 Activating venv and installing dependencies..."; \
 	bash -c "source .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt" && \
 	echo "✅ Python environment ready!" && \
-	echo "$(BLUE)🚀 Starting services with orchestrator...$(NC)" && \
-	bash -c "source .venv/bin/activate && python3 docker/orchestrator.py start" ; \
+	echo "$(BLUE)� Stopping any existing services...$(NC)" && \
+	bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py stop" || true && \
+	echo "$(BLUE)�🚀 Starting services with orchestrator...$(NC)" && \
+	bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py start" && \
 	echo "$(BLUE)🔧 Configuring Git hooks...$(NC)" && \
-	bash -c "source .venv/bin/activate && python3 docker/orchestrator.py hooks" && \
-	echo "$(GREEN)🎉 Setup completed! Check individual services.$(NC)" && \
-	echo "$(BLUE)💡 Access: http://localhost$(NC)" || echo "$(YELLOW)⚠️  Setup completed with warnings. Check services status.$(NC)"
+	bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py hooks" && \
+	echo "$(BLUE)🧪 Running tests to verify setup...$(NC)" && \
+	(cd ../.. && $(MAKE) test) && \
+	echo "$(GREEN)🎉 Setup completed successfully! All tests passed.$(NC)" && \
+	echo "$(BLUE)💡 Access: http://localhost$(NC)" || (echo "$(YELLOW)⚠️  Setup completed with issues. Check services and tests.$(NC)" && exit 1)

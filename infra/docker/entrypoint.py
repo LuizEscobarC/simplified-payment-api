@@ -122,14 +122,20 @@ class LaravelEntrypoint:
         console.print("📦 Instalando NPM dependências...", style="blue")
 
         try:
+            # Verificar se npm está disponível
+            self.docker_exec(["which", "npm"], cwd=self.base_path)
+        except subprocess.CalledProcessError:
+            console.print("⚠️  NPM não encontrado, pulando instalação de dependências JS", style="yellow")
+            return
+
+        try:
             self.docker_exec(
                 ["npm", "install", "--production"],
                 cwd=self.base_path
             )
             console.print("✅ NPM install concluído", style="green")
         except subprocess.CalledProcessError as e:
-            console.print(f"❌ Erro no npm install: {e}", style="red")
-            raise
+            console.print(f"⚠️  NPM install falhou, mas continuando: {e}", style="yellow")
 
     def artisan(self, command: str, args: Optional[List[str]] = None) -> None:
         """
@@ -157,27 +163,57 @@ class LaravelEntrypoint:
         console.print("🔑 Verificando APP_KEY...", style="blue")
 
         try:
-            # Verifica se APP_KEY já está definida
+            # Primeiro verifica se o arquivo .env existe
+            env_file = f"{self.base_path}/.env"
             result = self.docker_exec([
-                "sh", "-c",
-                f"grep -q '^APP_KEY=.*[a-zA-Z0-9]' {self.base_path}/.env 2>/dev/null && echo 'exists' || echo 'missing'"
+                "test", "-f", env_file
             ], cwd=self.base_path)
 
-            # Como docker_exec usa check=True, se chegou aqui significa que o comando foi bem-sucedido
-            # Mas precisamos verificar a saída. Como subprocess.run com check=True não retorna stdout,
-            # vamos usar uma abordagem diferente.
+            if result.returncode != 0:
+                console.print(f"❌ Arquivo .env não encontrado: {env_file}", style="red")
+                raise RuntimeError(f"Arquivo .env não existe: {env_file}")
 
-            # Tenta executar key:generate (vai falhar silenciosamente se já existir)
-            try:
+            # Verifica se APP_KEY está vazia ou não definida
+            result = self.docker_exec([
+                "sh", "-c",
+                f"grep '^APP_KEY=' {env_file} | cut -d'=' -f2"
+            ], cwd=self.base_path)
+
+            app_key = result.stdout.strip()
+
+            if not app_key or app_key == "":
+                console.print("🔑 APP_KEY vazia, gerando nova chave...", style="blue")
                 self.artisan("key:generate")
                 console.print("✅ APP_KEY gerada", style="green")
-            except subprocess.CalledProcessError:
+            else:
                 console.print("✓ APP_KEY já existe", style="yellow")
 
-        except subprocess.CalledProcessError:
-            console.print("🔑 Gerando APP_KEY...", style="blue")
-            self.artisan("key:generate")
-            console.print("✅ APP_KEY gerada", style="green")
+        except subprocess.CalledProcessError as e:
+            console.print(f"❌ Erro ao verificar APP_KEY: {e}", style="red")
+            console.print("🔑 Tentando gerar APP_KEY...", style="blue")
+            try:
+                self.artisan("key:generate")
+                console.print("✅ APP_KEY gerada após erro", style="green")
+            except Exception as e2:
+                console.print(f"❌ Falha crítica ao gerar APP_KEY: {e2}", style="red")
+                raise
+            except subprocess.CalledProcessError as e2:
+                console.print(f"❌ Falha ao gerar APP_KEY: {e2}", style="red")
+                raise
+
+    def copy_env_for_testing(self) -> None:
+        """
+        Copia .env para .env.testing para garantir que testes funcionem.
+        """
+        console.print("📋 Copiando .env para .env.testing...", style="blue")
+
+        try:
+            self.docker_exec([
+                "cp", "/var/www/html/.env", "/var/www/html/.env.testing"
+            ])
+            console.print("✅ .env.testing criado", style="green")
+        except subprocess.CalledProcessError as e:
+            console.print(f"⚠️  Falha ao copiar para .env.testing: {e}", style="yellow")
 
     def run_migrations(self) -> None:
         """
@@ -207,7 +243,8 @@ class LaravelEntrypoint:
 
         for cache_type in caches:
             try:
-                self.artisan(f"{cache_type}:clear")
+                cmd = ["php", "artisan", f"{cache_type}:clear"]
+                self.docker_exec(cmd, cwd=self.base_path)
                 console.print(f"✓ {cache_type} limpo", style="green")
             except subprocess.CalledProcessError:
                 console.print(f"⚠️  Erro ao limpar {cache_type}", style="yellow")
@@ -241,7 +278,7 @@ class LaravelEntrypoint:
         for directory in dirs_to_fix:
             try:
                 self.docker_exec(["chmod", "-R", "775", directory])
-                self.docker_exec(["chown", "-R", "www-data:www-data", directory])
+                self.docker_exec(["chown", "-R", "appuser:appuser", directory])
                 console.print(f"✓ {directory.split('/')[-1]} OK", style="green")
             except subprocess.CalledProcessError as e:
                 console.print(f"❌ Erro ao ajustar {directory}: {e}", style="red")
@@ -265,6 +302,22 @@ class LaravelEntrypoint:
             # 1. Verificar ambiente
             self.ensure_environment()
 
+            # 1.5. Garantir que .env existe antes de qualquer coisa
+            console.print("📄 Verificando se .env existe...", style="blue")
+            env_file = f"{self.base_path}/.env"
+            result = self.docker_exec(["test", "-f", env_file], cwd=self.base_path)
+            if result.returncode != 0:
+                console.print(f"❌ Arquivo .env não encontrado em {env_file}", style="red")
+                console.print("📄 Criando .env básico...", style="blue")
+                # Criar .env básico se não existir
+                self.docker_exec([
+                    "sh", "-c",
+                    f"echo 'APP_NAME=Laravel' > {env_file} && echo 'APP_ENV=local' >> {env_file} && echo 'APP_KEY=' >> {env_file}"
+                ], cwd=self.base_path)
+                console.print("✅ .env básico criado", style="green")
+            else:
+                console.print("✅ .env encontrado", style="green")
+
             # 2. Dependências
             try:
                 self.composer_install()
@@ -279,6 +332,8 @@ class LaravelEntrypoint:
             # 3. Chave Laravel
             try:
                 self.generate_app_key()
+                # Copiar .env para .env.testing para testes
+                self.copy_env_for_testing()
             except Exception as e:
                 console.print(f"⚠️  APP_KEY falhou: {e}", style="yellow")
 

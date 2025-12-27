@@ -86,7 +86,8 @@ class ServiceOrchestrator:
             env_file_path = project_root / "infra" / "docker" / ".env"
 
             # Usar LaravelEnvManager para carregar as variáveis
-            env_manager = LaravelEnvManager(env_file=str(env_file_path))
+            api_example_path = project_root / "infra" / "docker" / ".env.example"
+            env_manager = LaravelEnvManager(env_file=str(env_file_path), example_file=str(api_example_path))
 
             # Validar e carregar variáveis
             if env_manager.setup_laravel_env():
