@@ -41,6 +41,12 @@ Para visualizar os diagramas de arquitetura na pasta `/doc` (arquivos .puml), vo
 Isso facilita entender a estrutura do sistema sem precisar de ferramentas externas.
 
 ## Instalação e Setup
+Dependencias makefile ubuntu
+```makefile dependencies
+sudo apt update
+sudo apt install docker.io python3 python3-pip python3-venv make
+```
+link util: https://linuxvox.com/blog/install-make-ubuntu/
 
 Para subir tudo rapidinho, vá na pasta `infra/docker` e rode `make all`. Isso usa o orquestrador Python para preparar o ambiente virtual, instalar dependências e subir os serviços via Docker Compose (Laravel, MySQL, Redis, MongoDB, Nginx). Os arquivos Python cuidam da automação, os docker-compose.yml definem os containers, e os Makefiles facilitam comandos como `make test` (na raiz) para rodar testes ou `make start` (em infra/docker) para subir serviços. É tudo automatizado, mas se precisar ajustar, olhe os scripts em `infra/docker/scripts` e `services`.
 
