@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Jobs\SendNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class SendNotificationJobTest extends TestCase

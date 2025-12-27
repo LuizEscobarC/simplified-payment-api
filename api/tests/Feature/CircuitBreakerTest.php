@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Services\CircuitBreaker;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
