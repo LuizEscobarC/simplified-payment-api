@@ -42,9 +42,10 @@ start-monitoring: ## Start services + monitoring
 	@echo "$(BLUE)🚀 Starting services with monitoring...$(NC)"
 	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py start --monitoring"
 
-hooks: ## Configure Git hooks for quality
-	@echo "$(BLUE)🔧 Configuring Git hooks...$(NC)"
+hooks: ## Configure Git hooks for quality (automatic setup)
+	@echo "$(BLUE)🔧 Configuring Git hooks automatically...$(NC)"
 	@cd $(INFRA_DIR) && bash -c "source .venv/bin/activate && python3 $(DOCKER_DIR)/orchestrator.py hooks"
+	@echo "$(GREEN)✅ Git hooks configured!$(NC)"
 
 status: ## Show services status
 	@echo "$(BLUE)📊 Services status...$(NC)"

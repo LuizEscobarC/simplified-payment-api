@@ -20,25 +20,43 @@ jobs:
       with:
         php-version: '8.3'
 
-    - name: Install Composer dependencies
-      run: composer install --no-interaction --prefer-dist --optimize-autoloader
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
 
-    - name: Install Node.js dependencies
-      run: pnpm install
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
 
-    - name: Directory Permissions
-      run: chmod -R 755 storage bootstrap/cache
-
-    - name: Copy .env
-      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
-
-    - name: Add swap memory
+    - name: Install Python dependencies
       run: |
-        sudo fallocate -l 4G /swapfile
-        sudo chmod 600 /swapfile
-        sudo mkswap /swapfile
-        sudo swapon /swapfile
-        sudo swapon --show
+        cd infra
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Start infrastructure
+      run: |
+        cd infra/docker
+        python3 orchestrator.py start --no-wait
+
+    - name: Wait for services
+      run: sleep 30
+
+    - name: Run PHP tests
+      run: make test
+
+    - name: Run PHP linters
+      run: make lint
+
+    - name: Run Pint fix
+      run: make pint
+
+    - name: Stop infrastructure
+      run: |
+        cd infra/docker
+        python3 orchestrator.py stop
 
     - name: Notify Slack on Failure
       if: failure()

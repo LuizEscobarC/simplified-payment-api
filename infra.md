@@ -19,6 +19,15 @@ Aqui vai uma explicação simples do que cada comando dos Makefiles faz. Temos d
 - **fix-permissions**: Ajusta permissões de arquivos para edição no host.
 - **all**: Faz setup completo, inicia serviços e configura hooks em um comando só.
 
+## Git Hooks Automáticos
+
+O comando `make hooks` ou `make all` configura automaticamente os Git hooks usando Husky:
+
+- **Pre-commit**: Executa Laravel Pint, PHP-CS-Fixer e PHPMD antes de cada commit
+- **Pre-push**: Executa PHPStan antes de cada push
+
+Os hooks rodam dentro dos containers Docker para garantir consistência.
+
 ## Makefile em infra/docker
 
 - **help**: Mostra ajuda com comandos disponíveis.

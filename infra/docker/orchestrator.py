@@ -96,6 +96,17 @@ class ServiceOrchestrator:
                 console.print("💡 Verifique se o arquivo .env existe e está configurado corretamente", style="yellow")
                 # Não sair, permitir que o sistema continue (útil para desenvolvimento)
 
+            # Verificar e copiar .env da API se necessário
+            api_env_path = project_root / "api" / ".env"
+            api_example_path = project_root / "infra" / "docker" / ".env.example"
+            api_env_manager = LaravelEnvManager(env_file=str(api_env_path), example_file=str(api_example_path))
+            if api_env_manager.setup_laravel_env():
+                console.print("✅ Variáveis de ambiente da API carregadas com sucesso", style="green")
+            else:
+                console.print("❌ Falha ao carregar variáveis de ambiente da API", style="red")
+                console.print("💡 Verifique se o arquivo .env da API existe e está configurado corretamente", style="yellow")
+                # Não sair, permitir que o sistema continue
+
         except Exception as e:
             console.print(f"❌ Erro ao carregar variáveis de ambiente: {e}", style="red")
             # Não sair, permitir que o sistema continue

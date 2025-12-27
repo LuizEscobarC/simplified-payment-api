@@ -177,6 +177,17 @@ class GitHooksService(BaseDockerService):
             huskyrc.write_text(huskyrc_content)
             console.print("✅ Husky: configurado")
 
+        # Configurar Git para usar .husky como hooksPath
+        try:
+            subprocess.run(
+                ["git", "config", "core.hooksPath", ".husky"],
+                cwd=self.project_root,
+                check=True
+            )
+            console.print("✅ Git: core.hooksPath configurado para .husky")
+        except subprocess.CalledProcessError:
+            console.print("⚠️ Git: não conseguiu configurar core.hooksPath")
+
     def _create_pre_commit_hook(self) -> None:
         """Cria hook pre-commit."""
         hook_path = self.hooks_dir / "pre-commit"
