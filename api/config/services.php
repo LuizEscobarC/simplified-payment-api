@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'notification' => [
+        'url' => env('NOTIFICATION_SERVICE_URL', 'https://util.devi.tools/api/v1'),
+    ],
+
 ];

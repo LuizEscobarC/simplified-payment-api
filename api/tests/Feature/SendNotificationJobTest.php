@@ -14,7 +14,7 @@ class SendNotificationJobTest extends TestCase
     public function test_send_notification_job_handles_successfully(): void
     {
         Http::fake([
-            'https://util.devi.tools/api/v1/notify' => Http::response([], 200),
+            config('services.notification.url').'/notify' => Http::response([], 200),
         ]);
 
         $data = [
@@ -26,7 +26,7 @@ class SendNotificationJobTest extends TestCase
         $job->handle();
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://util.devi.tools/api/v1/notify' &&
+            return $request->url() === config('services.notification.url').'/notify' &&
                    $request->method() === 'POST' &&
                    $request['transaction_id'] == 123 &&
                    $request['message'] === 'Test message';
@@ -36,7 +36,7 @@ class SendNotificationJobTest extends TestCase
     public function test_send_notification_job_with_failure_logs_locally(): void
     {
         Http::fake([
-            'https://util.devi.tools/api/v1/notify' => Http::response([], 500),
+            config('services.notification.url').'/notify' => Http::response([], 500),
         ]);
 
         $data = [
@@ -48,7 +48,7 @@ class SendNotificationJobTest extends TestCase
         $job->handle();
 
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://util.devi.tools/api/v1/notify' &&
+            return $request->url() === config('services.notification.url').'/notify' &&
                    $request->method() === 'POST' &&
                    $request['transaction_id'] == 123 &&
                    $request['message'] === 'Transfer completed';

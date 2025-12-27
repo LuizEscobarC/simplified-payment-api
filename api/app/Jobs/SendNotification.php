@@ -12,17 +12,12 @@ class SendNotification implements ShouldQueue
 {
     use Queueable;
 
-    public $data;
-
-    public function __construct(array $data)
-    {
-        $this->data = $data;
-    }
+    public function __construct(private array $data) {}
 
     public function handle(): void
     {
         try {
-            $response = Http::post('https://util.devi.tools/api/v1/notify', [
+            $response = Http::post(config('services.notification.url').'/notify', [
                 'transaction_id' => $this->data['transaction_id'],
                 'message' => $this->data['message'],
             ]);

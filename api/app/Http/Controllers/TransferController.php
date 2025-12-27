@@ -9,12 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 class TransferController extends Controller
 {
-    protected $transferService;
-
-    public function __construct(TransferService $transferService)
-    {
-        $this->transferService = $transferService;
-    }
+    public function __construct(private TransferService $transferService) {}
 
     public function transfer(TransferRequest $request): JsonResponse
     {
