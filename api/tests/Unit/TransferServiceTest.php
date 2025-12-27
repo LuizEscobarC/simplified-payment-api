@@ -110,6 +110,78 @@ class TransferServiceTest extends TestCase
         Queue::assertPushed(SendNotification::class);
     }
 
+    public function test_execute_transfer_between_common_users_successful(): void
+    {
+        $payer = User::factory()->create(['type' => UserType::COMMON, 'balance' => 100.0]);
+        $payee = User::factory()->create(['type' => UserType::COMMON, 'balance' => 50.0]);
+
+        $repository = $this->createMock(TransferRepositoryInterface::class);
+        $eventRepository = $this->createMock(EventRepositoryInterface::class);
+        $userRepository = $this->createMock(UserRepositoryInterface::class);
+        $transferPolicy = $this->createMock(TransferPolicy::class);
+
+        $userRepository->expects($this->exactly(2))
+            ->method('findById')
+            ->willReturnOnConsecutiveCalls($payer, $payee);
+
+        $transferPolicy->expects($this->once())
+            ->method('canTransfer')
+            ->with($payer, 50.0)
+            ->willReturn(true);
+
+        $transferPolicy->expects($this->once())
+            ->method('canReceive')
+            ->with($payee)
+            ->willReturn(true);
+
+        $transferPolicy->expects($this->once())
+            ->method('isIdempotent')
+            ->with('correlation-123')
+            ->willReturn(true);
+
+        $transferPolicy->expects($this->once())
+            ->method('isAuthorized')
+            ->with(['value' => 50.0, 'payer' => $payer->id, 'payee' => $payee->id, 'correlation_id' => 'correlation-123'])
+            ->willReturn(true);
+
+        $transaction = new Transaction([
+            'payer_id' => $payer->id,
+            'payee_id' => $payee->id,
+            'value' => 50.0,
+            'correlation_id' => 'correlation-123',
+            'status' => TransactionStatus::APPROVED,
+        ]);
+        $repository->expects($this->once())
+            ->method('save')
+            ->with($this->callback(function ($arg) use ($payer, $payee) {
+                return $arg->payer_id === $payer->id && $arg->payee_id === $payee->id && $arg->value == 50.0;
+            }))
+            ->willReturn($transaction);
+
+        $eventRepository->expects($this->exactly(3))
+            ->method('save')
+            ->with($this->isInstanceOf(Event::class));
+
+        $service = new TransferService($repository, $eventRepository, $userRepository, $transferPolicy);
+
+        $result = $service->executeTransfer([
+            'value' => 50.0,
+            'payer' => $payer->id,
+            'payee' => $payee->id,
+            'correlation_id' => 'correlation-123',
+        ]);
+
+        $this->assertInstanceOf(Transaction::class, $result);
+        $this->assertEquals(TransactionStatus::APPROVED, $result->status);
+
+        $payer->refresh();
+        $payee->refresh();
+        $this->assertEquals(50.0, $payer->balance);
+        $this->assertEquals(100.0, $payee->balance);
+
+        Queue::assertPushed(SendNotification::class);
+    }
+
     public function test_execute_transfer_fails_payer_not_found(): void
     {
         $repository = $this->createMock(TransferRepositoryInterface::class);

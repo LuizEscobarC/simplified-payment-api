@@ -73,6 +73,6 @@ class User extends Authenticatable
 
     public function canReceive(): bool
     {
-        return $this->type === UserType::MERCHANT;
+        return in_array($this->type, [UserType::COMMON, UserType::MERCHANT]);
     }
 }

@@ -104,4 +104,49 @@ class TransferEndpointTest extends TestCase
         $response->assertStatus(422)
             ->assertJson(['message' => 'Insufficient balance']);
     }
+
+    public function test_transfer_between_common_users_successful(): void
+    {
+        Bus::fake();
+
+        $eventRepoMock = Mockery::mock(EventRepositoryInterface::class);
+        $eventRepoMock->shouldReceive('save')->andReturn(new Event);
+        $this->app->instance(EventRepositoryInterface::class, $eventRepoMock);
+
+        $transferRepoMock = Mockery::mock(TransferRepositoryInterface::class);
+        $transferRepoMock->shouldReceive('findByCorrelationId')->andReturn(null);
+        $transferRepoMock->shouldReceive('save')->andReturn(new \App\Models\Transaction([
+            'id' => 1,
+            'payer_id' => 1,
+            'payee_id' => 2,
+            'value' => 50.00,
+            'correlation_id' => 'unique-id-124',
+            'status' => 'approved',
+        ]));
+        $this->app->instance(TransferRepositoryInterface::class, $transferRepoMock);
+
+        $transferPolicyMock = Mockery::mock(TransferPolicy::class);
+        $transferPolicyMock->shouldReceive('canTransfer')->andReturn(true);
+        $transferPolicyMock->shouldReceive('canReceive')->andReturn(true);
+        $transferPolicyMock->shouldReceive('isIdempotent')->andReturn(true);
+        $transferPolicyMock->shouldReceive('isAuthorized')->andReturn(true);
+        $this->app->instance(TransferPolicy::class, $transferPolicyMock);
+
+        $payer = User::factory()->create(['type' => 'common', 'balance' => 100.00]);
+        $payee = User::factory()->create(['type' => 'common', 'balance' => 0.00]);
+
+        $data = [
+            'value' => 50.00,
+            'payer' => $payer->id,
+            'payee' => $payee->id,
+            'correlation_id' => 'unique-id-124',
+        ];
+
+        $response = $this->postJson('/api/transfer', $data);
+
+        $response->assertStatus(200)
+            ->assertJson(['message' => 'Transfer successful']);
+
+        Bus::assertDispatched(SendNotification::class);
+    }
 }

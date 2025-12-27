@@ -18,7 +18,7 @@ class TransferPolicy
 
     public function canReceive(User $user): bool
     {
-        return $user->type === UserType::MERCHANT;
+        return in_array($user->type, [UserType::COMMON, UserType::MERCHANT]);
     }
 
     public function isIdempotent(string $correlationId): bool
