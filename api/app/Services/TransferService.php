@@ -7,11 +7,13 @@ use App\Enums\TransactionStatus;
 use App\Enums\UserType;
 use App\Jobs\SendNotification;
 use App\Models\Event;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Policies\TransferPolicy;
 use App\Repositories\Interfaces\EventRepositoryInterface;
 use App\Repositories\Interfaces\TransferRepositoryInterface;
 use App\Repositories\Interfaces\UserRepositoryInterface;
+use Exception;
 use Illuminate\Support\Facades\DB;
 
 class TransferService
@@ -41,14 +43,14 @@ class TransferService
     {
         $payer = $this->userRepository->findById($data['payer']);
         if (! $payer) {
-            throw new \Exception('Payer not found');
+            throw new Exception('Payer not found');
         }
         if (! $this->transferPolicy->canTransfer($payer, $data['value'])) {
             if ($payer->type !== UserType::COMMON) {
-                throw new \Exception('Only common users can make transfers');
+                throw new Exception('Only common users can make transfers');
             }
             if (! $payer->hasSufficientBalance($data['value'])) {
-                throw new \Exception('Insufficient balance');
+                throw new Exception('Insufficient balance');
             }
         }
 
@@ -59,10 +61,10 @@ class TransferService
     {
         $payee = $this->userRepository->findById($data['payee']);
         if (! $payee) {
-            throw new \Exception('Payee not found');
+            throw new Exception('Payee not found');
         }
         if (! $this->transferPolicy->canReceive($payee)) {
-            throw new \Exception('Payee cannot receive transfers');
+            throw new Exception('Payee cannot receive transfers');
         }
 
         return $payee;
@@ -71,14 +73,14 @@ class TransferService
     private function checkIdempotency(array $data): void
     {
         if (! $this->transferPolicy->isIdempotent($data['correlation_id'])) {
-            throw new \Exception('Duplicate transfer');
+            throw new Exception('Duplicate transfer');
         }
     }
 
     private function authorizeTransferOrFail(array $data): void
     {
         if (! $this->transferPolicy->isAuthorized($data)) {
-            throw new \Exception('Transfer not authorized by external service');
+            throw new Exception('Transfer not authorized by external service');
         }
     }
 
@@ -98,7 +100,7 @@ class TransferService
         $this->eventRepository->save($event);
     }
 
-    private function performTransferInTransaction(array $data, User $payer, User $payee): \App\Models\Transaction
+    private function performTransferInTransaction(array $data, User $payer, User $payee): Transaction
     {
         return DB::transaction(function () use ($data, $payer, $payee) {
             $oldPayerBalance = floatval($payer->balance);
@@ -112,7 +114,8 @@ class TransferService
             $this->saveBalanceUpdatedEvent($payer->id, $oldPayerBalance, $payer->balance, -$data['value'], $data['correlation_id']);
             $this->saveBalanceUpdatedEvent($payee->id, $oldPayeeBalance, $payee->balance, $data['value'], $data['correlation_id']);
 
-            $transaction = new \App\Models\Transaction([
+            $transaction = app(Transaction::class);
+            $transaction->fill([
                 'payer_id' => $data['payer'],
                 'payee_id' => $data['payee'],
                 'value' => $data['value'],
@@ -140,7 +143,7 @@ class TransferService
         $this->eventRepository->save($event);
     }
 
-    private function dispatchNotification(\App\Models\Transaction $transaction): void
+    private function dispatchNotification(Transaction $transaction): void
     {
         SendNotification::dispatch([
             'transaction_id' => $transaction->id,

@@ -7,6 +7,9 @@ BLUE := \033[0;34m
 YELLOW := \033[1;33m
 NC := \033[0m # No Color
 
+# Detect if inside container
+IS_INSIDE_CONTAINER := $(shell if [ -f /var/www/html/composer.json ]; then echo "true"; else echo "false"; fi)
+
 # Directories
 INFRA_DIR := ..
 DOCKER_DIR := .
@@ -62,9 +65,10 @@ test: ## Run PHP tests
 	@echo "$(BLUE)🧪 Running PHP tests...$(NC)"
 	@docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpunit"
 
-lint: ## Run PHP linters (Pint and PHPStan)
+lint: ## Run PHP linters (Pint, PHPMD, and PHPStan)
 	@echo "$(BLUE)🔍 Running PHP linters...$(NC)"
 	@docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/pint --test" && \
+	docker exec -it payment-api sh -c "cd /var/www/html && /usr/local/bin/phpmd app xml phpmd.xml" && \
 	docker exec -it payment-api sh -c "cd /var/www/html && ./vendor/bin/phpstan analyse app --memory-limit=-1"
 
 pint: ## Run Pint to fix PHP code style
