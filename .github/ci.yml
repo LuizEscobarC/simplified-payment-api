@@ -31,32 +31,25 @@ jobs:
         python-version: '3.9'
 
     - name: Install Python dependencies
-      run: |
-        cd infra
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      run: pip install -r infra/requirements.txt
 
-    - name: Start infrastructure
-      run: |
-        cd infra/docker
-        python3 orchestrator.py start --no-wait
-
-    - name: Wait for services
-      run: sleep 30
-
-    - name: Run PHP tests
+    - name: Run PHP tests (root Makefile)
       run: make test
 
-    - name: Run PHP linters
+    - name: Run PHP linters (root Makefile)
       run: make lint
 
-    - name: Run Pint fix
+    - name: Run Pint fix (root Makefile)
       run: make pint
 
-    - name: Stop infrastructure
-      run: |
-        cd infra/docker
-        python3 orchestrator.py stop
+    - name: Run PHP tests (infra/docker Makefile)
+      run: make -C infra/docker test
+
+    - name: Run PHP linters (infra/docker Makefile)
+      run: make -C infra/docker lint
+
+    - name: Run Pint fix (infra/docker Makefile)
+      run: make -C infra/docker pint
 
     - name: Notify Slack on Failure
       if: failure()
