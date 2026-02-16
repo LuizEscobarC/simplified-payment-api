@@ -1,92 +1,78 @@
-# Use PHP 8.3 FPM Alpine for smaller image size and security
-FROM php:8.3-fpm-alpine
-
-# Install system dependencies
-RUN apk add --no-cache \
-        git \
-        curl \
-        libpng-dev \
-        oniguruma-dev \
-        libxml2-dev \
-        zip \
-        unzip \
-        nodejs \
-        npm \
-        supervisor \
-        nginx \
-        mysql-client \
-        python3 \
-        py3-pip \
-        openssl-dev \
-        $PHPIZE_DEPS \
-        shadow \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && pecl install mongodb \
-    && docker-php-ext-enable mongodb \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
-    && apk del $PHPIZE_DEPS
-
-# Create user with host UID/GID to avoid permission issues
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-RUN if [ "$USER_ID" != "0" ]; then \
-        groupmod -n appuser www-data && \
-        usermod -l appuser -d /home/appuser www-data && \
-        usermod -u $USER_ID appuser && \
-        groupmod -g $GROUP_ID appuser && \
-        mkdir -p /home/appuser && \
-        chown appuser:appuser /home/appuser; \
-    fi
-
-# Install Python dependencies
-RUN pip3 install --no-cache-dir --break-system-packages mysql-connector-python redis rich
+FROM composer:2 AS vendor
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Set working directory
 WORKDIR /var/www/html
-
 # Copy composer files
-COPY ./api/composer.json ./
-COPY ./api/composer.lock* ./
-
-# Copy application code
-COPY ./api .
-
+COPY ./api/composer.json ./api/composer.lock* ./
 # Install PHP dependencies
 RUN composer install --optimize-autoloader --no-interaction --ignore-platform-reqs --no-scripts
+
 
 # Install code quality tools
 RUN composer global require phpmd/phpmd phpstan/phpstan
 RUN ln -s /root/.composer/vendor/bin/phpmd /usr/local/bin/phpmd
 RUN ln -s /root/.composer/vendor/bin/phpstan /usr/local/bin/phpstan
 
-# Install Node.js dependencies and build assets
-RUN npm install && npm run build
+# Stage 2: Node assets
+FROM node:18-alpine AS node_builder
+ARG NODE_ENV=development
+WORKDIR /var/www/html
 
-# Set permissions
+# copy only package files first to leverage cache
+COPY ./api/package.json ./api/package-lock.json* ./
+RUN npm ci --no-audit --prefer-offline
+
+# now copy app and run build conditionally (build needs source files)
+COPY ./api ./
+RUN if [ "$NODE_ENV" = "production" ]; then npm run build; else mkdir -p /var/www/html/public && echo '{}' > /var/www/html/public/.placeholder; fi
+
+# Stage 3: Runtime (PHP-FPM)
+FROM php:8.3-fpm-alpine AS runtime
 ARG USER_ID=1000
 ARG GROUP_ID=1000
+ARG VERSION=dev
+ARG BUILD_DATE
+ARG VCS_REF
+LABEL org.opencontainers.image.source="simplified-payment-api" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.title="SimplifiedPaymentAPI"
+
+# system deps + php extensions (combined to reduce layers)
+RUN apk add --no-cache \
+        libpng-dev oniguruma-dev libxml2-dev zip unzip bash shadow \
+        python3 py3-pip \
+    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS gcc musl-dev make autoconf \
+    && pecl install redis && docker-php-ext-enable redis \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
+    && apk del .build-deps
+
+# create non-root app user
 RUN if [ "$USER_ID" != "0" ]; then \
-        chown -R appuser:appuser /var/www/html; \
-    else \
-        chown -R www-data:www-data /var/www/html; \
-    fi \
-    && chmod -R 755 /var/www/html/storage \
-    && chmod -R 755 /var/www/html/bootstrap/cache
+        addgroup -g ${GROUP_ID} appuser && adduser -u ${USER_ID} -G appuser -h /home/appuser -D appuser; \
+    fi
 
-# Copy nginx configuration
-COPY ./infra/docker/nginx/local.conf /etc/nginx/http.d/default.conf
+RUN pip3 install --no-cache-dir --break-system-packages mysql-connector-python redis rich
 
-# Copy supervisor configuration
-COPY ./infra/docker/supervisor/supervisor.conf /etc/supervisor/conf.d/supervisor.conf
+WORKDIR /var/www/html
 
-# Create supervisor log directory
-RUN mkdir -p /var/log/supervisor
+# copy only needed artifacts to leverage cache
+COPY --from=vendor /var/www/html/vendor ./vendor
+COPY --from=node_builder /var/www/html/public ./public
+# copy remaining app files
+COPY ./api ./
+# permissions
+RUN chown -R appuser:appuser /var/www/html \
+    && chmod -R 755 storage bootstrap/cache || true
 
-# Copy entrypoint script
+USER appuser
+
+# healthcheck (lightweight)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD php -r "echo extension_loaded('pdo') ? 'OK' : exit(1);" || exit 1
+
 COPY ./infra/docker/entrypoint.py /usr/local/bin/entrypoint.py
 RUN chmod +x /usr/local/bin/entrypoint.py
 

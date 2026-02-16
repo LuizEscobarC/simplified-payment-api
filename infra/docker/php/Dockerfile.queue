@@ -1,84 +1,82 @@
-# Use PHP 8.3 FPM Alpine for smaller image size and security
-FROM php:8.3-fpm-alpine
+# Builder stage: install composer dependencies
+FROM php:8.3-cli-alpine AS builder
 
-# Install system dependencies
-RUN apk add --no-cache \
+# Install minimal build tools for Composer (kept in a single layer)
+RUN apk add --no-cache --virtual .build-deps \
     git \
-    curl \
-    libpng-dev \
-    oniguruma-dev \
-    libxml2-dev \
     zip \
     unzip \
-    nodejs \
-    npm \
-    supervisor \
-    mysql-client \
-    redis \
-    python3 \
-    py3-pip \
-    autoconf \
-    gcc \
-    musl-dev \
-    make \
-    shadow \
-    && pecl install redis && docker-php-ext-enable redis \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
-    && apk del autoconf gcc musl-dev make
+    && apk add --no-cache curl \
+    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer \
+    && composer --version
 
-# Create user with host UID/GID to avoid permission issues
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-RUN if [ "$USER_ID" != "0" ]; then \
-        groupmod -n appuser www-data && \
-        usermod -l appuser -d /home/appuser www-data && \
-        usermod -u $USER_ID appuser && \
-        groupmod -g $GROUP_ID appuser && \
-        mkdir -p /home/appuser && \
-        chown appuser:appuser /home/appuser; \
-    fi
+WORKDIR /app
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir --break-system-packages mysql-connector-python redis rich
-
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Set working directory
-WORKDIR /var/www/html
-
-# Copy composer files
+# Copy composer files and install vendors to leverage cache
 COPY ./api/composer.json ./
 COPY ./api/composer.lock* ./
+RUN composer install --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-reqs \
+    && rm -rf /root/.composer/cache
 
-# Copy application code
-COPY ./api .
+# Copy application source (so vendor is next to app files)
+COPY ./api ./
 
-# Install PHP dependencies
-RUN composer install --optimize-autoloader --no-interaction --ignore-platform-reqs
 
-# Install Node.js dependencies and build assets
-RUN npm install && npm run build
+# Runtime stage: slim runtime image with only necessary runtime deps
+FROM php:8.3-fpm-alpine AS runtime
 
-# Set permissions
 ARG USER_ID=1000
 ARG GROUP_ID=1000
+
+# Install runtime packages, build and remove build deps in one RUN to keep image small
+RUN apk add --no-cache --virtual .run-deps \
+        supervisor \
+        mysql-client \
+        python3 \
+        py3-pip \
+        redis && \
+    apk add --no-cache --virtual .build-deps \
+        autoconf \
+        gcc \
+        musl-dev \
+        make \
+        libpng-dev \
+        oniguruma-dev \
+        libxml2-dev && \
+    pecl install redis && docker-php-ext-enable redis && \
+    docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd && \
+    apk del .build-deps && \
+    rm -rf /var/cache/apk/* /tmp/*
+
+# Install python packages (no-cache)
+RUN pip3 install --no-cache-dir mysql-connector-python redis rich
+
+# Create runtime user matching host UID/GID when provided
+RUN if [ "$USER_ID" != "0" ]; then \
+        addgroup -g ${GROUP_ID} appuser && \
+        adduser -D -u ${USER_ID} -G appuser -h /home/appuser -s /bin/sh appuser; \
+    fi && mkdir -p /home/appuser /var/log/supervisor
+
+WORKDIR /var/www/html
+
+# Copy application and vendor from builder
+COPY --from=builder /app /var/www/html
+
+# Set permissions and tighten directory modes in one step
 RUN if [ "$USER_ID" != "0" ]; then \
         chown -R appuser:appuser /var/www/html; \
     else \
-        chown -R www-data:www-data /var/www/html; \
-    fi \
-    && chmod -R 755 /var/www/html/storage
+        chown -R appuser:appuser /var/www/html; \
+    fi && \
+    find /var/www/html -type d -exec chmod 755 {} + && \
+    find /var/www/html -type f -exec chmod 644 {} + && \
+    chmod -R 755 /var/www/html/storage
 
-# Copy supervisor configuration
+# Copy supervisor configuration and entrypoint
 COPY ./infra/docker/supervisor/supervisor.conf /etc/supervisor/conf.d/supervisor.conf
-
-# Create supervisor log directory
-RUN mkdir -p /var/log/supervisor
-
-# Copy entrypoint script
 COPY ./infra/docker/entrypoint.py /usr/local/bin/entrypoint.py
 RUN chmod +x /usr/local/bin/entrypoint.py
 
-# Run supervisor
+# Entrypoint then supervisor as default
+ENTRYPOINT ["/usr/local/bin/entrypoint.py"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisor.conf"]

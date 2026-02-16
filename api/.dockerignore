@@ -1,0 +1,51 @@
+# VCS
+.git
+
+# Dependencies
+node_modules
+vendor
+
+# Env / secrets
+# .env
+# .env.*.local
+# .env.local
+# .env.testing
+# .env.backup
+# .envrc
+
+# Runtime / build artifacts
+npm-debug.log
+yarn-error.log
+npm-debug.log*
+yarn-debug.log*
+*.log
+*.tmp
+*.cache
+.cache
+tmp
+build
+dist
+coverage
+
+# Tests / CI
+tests
+.phpunit.result.cache
+phpunit.xml
+phpunit.xml.dist
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Docker / Compose local overrides
+docker-compose.override.yml
+.docker-compose.*
+
+# Laravel runtime artifacts (avoid copying transient files)
+storage/debugbar
+storage/framework/cache/data
+storage/framework/sessions
+storage/framework/views
+public/storage
