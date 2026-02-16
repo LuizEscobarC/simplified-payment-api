@@ -71,7 +71,7 @@ USER appuser
 
 # healthcheck (lightweight)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD php -r "echo extension_loaded('pdo') ? 'OK' : exit(1);" || exit 1
+  CMD php -r "exit(extension_loaded('pdo') ? 0 : 1);"
 
 COPY ./infra/docker/entrypoint.py /usr/local/bin/entrypoint.py
 RUN chmod +x /usr/local/bin/entrypoint.py
