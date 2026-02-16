@@ -27,6 +27,14 @@ FROM php:8.3-fpm-alpine AS runtime
 
 ARG USER_ID=1000
 ARG GROUP_ID=1000
+ARG VERSION=dev
+ARG BUILD_DATE
+ARG VCS_REF
+LABEL org.opencontainers.image.source="simplified-payment-api" \
+    org.opencontainers.image.version="${VERSION}" \
+    org.opencontainers.image.revision="${VCS_REF}" \
+    org.opencontainers.image.created="${BUILD_DATE}" \
+    org.opencontainers.image.title="SimplifiedPaymentAPI - queue"
 
 # Install runtime packages, build and remove build deps in one RUN to keep image small
 RUN apk add --no-cache --virtual .run-deps \
@@ -73,9 +81,13 @@ RUN if [ "$USER_ID" != "0" ]; then \
     chmod -R 755 /var/www/html/storage
 
 # Copy supervisor configuration and entrypoint
-COPY ./infra/docker/supervisor/supervisor.conf /etc/supervisor/conf.d/supervisor.conf
+COPY ./infra/docker/supervisor /etc/supervisor/conf.d
 COPY ./infra/docker/entrypoint.py /usr/local/bin/entrypoint.py
-RUN chmod +x /usr/local/bin/entrypoint.py
+RUN chmod +x /usr/local/bin/entrypoint.py && chown root:root /usr/local/bin/entrypoint.py
+
+# healthcheck for runtime
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD php -r "exit(extension_loaded('pdo') ? 0 : 1);"
 
 # Entrypoint then supervisor as default
 ENTRYPOINT ["/usr/local/bin/entrypoint.py"]

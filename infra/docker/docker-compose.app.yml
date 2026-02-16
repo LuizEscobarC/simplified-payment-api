@@ -26,6 +26,7 @@ services:
             args:
                 USER_ID: ${USER_ID:-1000}
                 GROUP_ID: ${GROUP_ID:-1000}
+        image: "${APP_IMAGE:-payment-api:local}"
         restart: unless-stopped
         environment:
             DB_CONNECTION: ${DB_CONNECTION}
@@ -63,6 +64,7 @@ services:
             args:
                 USER_ID: ${USER_ID:-1000}
                 GROUP_ID: ${GROUP_ID:-1000}
+        image: "${QUEUE_IMAGE:-payment-queue:local}"
         restart: unless-stopped
         env_file:
             - .env

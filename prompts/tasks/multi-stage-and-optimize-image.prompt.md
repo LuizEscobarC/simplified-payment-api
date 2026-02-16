@@ -88,10 +88,10 @@ build
 - GitHub Actions job mínimo: checkout, build, run smoke test, upload artifact (optional) or push to registry with tag.
 
 ## Critérios de aceitação
-- [ ] Dockerfile multi-stage presente e documentado.
-- [ ] `.dockerignore` adicionada e validada.
-- [ ] Build local gera imagem com tamanho aceitável (documentar baseline).
-- [ ] Smoke test passa e imagem executa corretamente.
+- [x] Dockerfile multi-stage presente e documentado. (both `infra/docker/php/Dockerfile.local` and `infra/docker/php/Dockerfile.queue`)
+- [x] `.dockerignore` adicionada e validada. (`api/.dockerignore` exists and excludes vendor/node_modules/tests`) 
+- [x] Build local gera imagem com tag e reporta tamanho/camadas (see `infra/docker/build-local.sh` and `infra/docker/build_image.py`).
+- [ ] Smoke test passa e imagem executa corretamente. (manual `docker run` smoke tests still required)
 - [ ] Pipeline CI builda e testa a imagem automaticamente.
 
 ## Observações

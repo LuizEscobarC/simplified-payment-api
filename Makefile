@@ -1,5 +1,5 @@
 # Makefile for infra docker - payment api
-.PHONY: help setup start start-monitoring hooks status stop clean all test lint pint
+.PHONY: help setup start start-monitoring hooks status stop clean all test lint pint build-image
 
 # Colors for output
 GREEN := \033[0;32m
@@ -98,3 +98,7 @@ all: ## Prepare everything and start (complete setup with orchestrator)
 	(cd .. && $(MAKE) test) && \
 	echo "$(GREEN)🎉 Setup completed successfully! All tests passed.$(NC)" && \
 	echo "$(BLUE)💡 Access: http://localhost$(NC)" || (echo "$(YELLOW)⚠️  Setup completed with issues. Check services and tests.$(NC)" && exit 1)
+
+build-image: ## Build Docker image using Python wrapper (usage: make build-image-py TAG=repo:tag)
+	@echo "$(BLUE)🔨 Building image (python)...$(NC)"
+	@python3 $(INFRA_DIR)/docker/build_image.py ${TAG}
