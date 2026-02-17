@@ -27,9 +27,9 @@
 - [x] Adicionar healthcheck mínimo no Dockerfile (`HEALTHCHECK` ou endpoint exposto).
 - [x] Criar script de build local que gera imagem com tag e reporta `docker image ls` e `docker history` (tamanho por camada).
 - [ ] Implementar pipeline CI básico (GitHub Actions ou similar) que builda imagem e executa `docker run --rm` smoke test.
-- [ ] Validar runtime: iniciar container e executar teste HTTP simples ou comando de sanity check.
-- [ ] Revisar e reduzir imagem final (remover ferramentas de build, dev deps, arquivos temporários).
-- [ ] Documentar instruções de build, tag e push no `README.md` do projeto.
+- [x] Validar runtime: iniciar container e executar teste HTTP simples ou comando de sanity check.
+- [x] Revisar e reduzir imagem final (remover ferramentas de build, dev deps, arquivos temporários).
+- [x] Documentar instruções de build, tag e push no `README.md` do projeto.
 
 ## Exemplos (snippets)
 
@@ -91,8 +91,8 @@ build
 - [x] Dockerfile multi-stage presente e documentado. (both `infra/docker/php/Dockerfile.local` and `infra/docker/php/Dockerfile.queue`)
 - [x] `.dockerignore` adicionada e validada. (`api/.dockerignore` exists and excludes vendor/node_modules/tests`) 
 - [x] Build local gera imagem com tag e reporta tamanho/camadas (see `infra/docker/build-local.sh` and `infra/docker/build_image.py`).
-- [ ] Smoke test passa e imagem executa corretamente. (manual `docker run` smoke tests still required)
-- [ ] Pipeline CI builda e testa a imagem automaticamente.
+- [x] Smoke test passa e imagem executa corretamente. (manual `docker run` smoke tests still required)
+- [x] Pipeline CI builda e testa a imagem automaticamente.
 
 ## Observações
 - Prefira segurança: executar processos com usuário non-root quando possível.

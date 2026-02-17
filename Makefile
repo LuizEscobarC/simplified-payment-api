@@ -102,3 +102,9 @@ all: ## Prepare everything and start (complete setup with orchestrator)
 build-image: ## Build Docker image using Python wrapper (usage: make build-image-py TAG=repo:tag)
 	@echo "$(BLUE)🔨 Building image (python)...$(NC)"
 	@python3 $(INFRA_DIR)/docker/build_image.py ${TAG}
+
+smoke-test: ## Run quick smoke tests against locally built images
+	@echo "$(BLUE)🔎 Running smoke tests for local images...$(NC)"
+	@docker run --rm payment-api:local php -v && \
+		docker run --rm payment-queue:local php -v && \
+		echo "$(GREEN)✅ Smoke tests passed for payment-api:local and payment-queue:local$(NC)" || (echo "$(YELLOW)⚠️  Smoke tests failed" && exit 1)

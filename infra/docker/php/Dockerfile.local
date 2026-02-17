@@ -6,7 +6,8 @@ WORKDIR /var/www/html
 # Copy composer files
 COPY ./api/composer.json ./api/composer.lock* ./
 # Install PHP dependencies
-RUN composer install --optimize-autoloader --no-interaction --ignore-platform-reqs --no-scripts
+RUN composer install --optimize-autoloader --no-interaction --no-dev --ignore-platform-reqs --no-scripts \
+    && rm -rf /root/.composer/cache
 
 
 # Install code quality tools

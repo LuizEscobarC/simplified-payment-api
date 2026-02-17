@@ -1,0 +1,30 @@
+name: Docker image build and smoke-test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build app image
+        run: |
+          docker build -f infra/docker/php/Dockerfile.local -t payment-api:${{ github.sha }} .
+
+      - name: Build queue image
+        run: |
+          docker build -f infra/docker/php/Dockerfile.queue -t payment-queue:${{ github.sha }} .
+
+      - name: Smoke test app image
+        run: |
+          docker run --rm payment-api:${{ github.sha }} php -v
+
+      - name: Smoke test queue image
+        run: |
+          docker run --rm payment-queue:${{ github.sha }} php -v

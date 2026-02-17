@@ -15,7 +15,7 @@ WORKDIR /app
 # Copy composer files and install vendors to leverage cache
 COPY ./api/composer.json ./
 COPY ./api/composer.lock* ./
-RUN composer install --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-reqs \
+RUN composer install --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-reqs --no-scripts \
     && rm -rf /root/.composer/cache
 
 # Copy application source (so vendor is next to app files)
@@ -57,7 +57,7 @@ RUN apk add --no-cache --virtual .run-deps \
     rm -rf /var/cache/apk/* /tmp/*
 
 # Install python packages (no-cache)
-RUN pip3 install --no-cache-dir mysql-connector-python redis rich
+RUN pip3 install --no-cache-dir --break-system-packages mysql-connector-python redis rich
 
 # Create runtime user matching host UID/GID when provided
 RUN if [ "$USER_ID" != "0" ]; then \
@@ -68,9 +68,19 @@ RUN if [ "$USER_ID" != "0" ]; then \
 WORKDIR /var/www/html
 
 # Copy application and vendor from builder
-COPY --from=builder /app /var/www/html
+## Copy only required app artifacts from builder to keep runtime smaller
+COPY --from=builder /app/vendor /var/www/html/vendor
+COPY --from=builder /app/app /var/www/html/app
+COPY --from=builder /app/bootstrap /var/www/html/bootstrap
+COPY --from=builder /app/config /var/www/html/config
+COPY --from=builder /app/database /var/www/html/database
+COPY --from=builder /app/resources /var/www/html/resources
+COPY --from=builder /app/routes /var/www/html/routes
+COPY --from=builder /app/public /var/www/html/public
+COPY --from=builder /app/composer.json /var/www/html/composer.json
+COPY --from=builder /app/composer.lock /var/www/html/composer.lock
 
-# Set permissions and tighten directory modes in one step
+# Set permissions and remove dev artifacts
 RUN if [ "$USER_ID" != "0" ]; then \
         chown -R appuser:appuser /var/www/html; \
     else \
@@ -78,7 +88,8 @@ RUN if [ "$USER_ID" != "0" ]; then \
     fi && \
     find /var/www/html -type d -exec chmod 755 {} + && \
     find /var/www/html -type f -exec chmod 644 {} + && \
-    chmod -R 755 /var/www/html/storage
+    chmod -R 755 /var/www/html/storage && \
+    rm -rf /var/www/html/tests /var/www/html/.github /var/www/html/.git* || true
 
 # Copy supervisor configuration and entrypoint
 COPY ./infra/docker/supervisor /etc/supervisor/conf.d
